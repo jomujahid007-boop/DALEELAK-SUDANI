@@ -32,6 +32,65 @@ function doGet() {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+/**
+ * Cross-origin bridge for the GitHub Pages frontend.
+ * Requests are submitted as ordinary HTML forms to avoid browser CORS
+ * restrictions. The response is delivered to the exact requesting iframe
+ * with postMessage; admin passwords and tokens are never placed in URLs.
+ */
+function doPost(e) {
+  var requestId = String((e && e.parameter && e.parameter.requestId) || '');
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(requestId)) requestId = 'invalid_request';
+
+  var result, ok = false, error = '';
+  try {
+    var action = String((e && e.parameter && e.parameter.action) || '');
+    var payloadText = String((e && e.parameter && e.parameter.payload) || '{}');
+    if (payloadText.length > 30000) throw new Error('حجم الطلب أكبر من المسموح.');
+    var payload = JSON.parse(payloadText || '{}');
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      throw new Error('صيغة الطلب غير صحيحة.');
+    }
+
+    switch (action) {
+      case 'getPublicData': result = getPublicData(); break;
+      case 'submitProviderListing': result = submitProviderListing(payload); break;
+      case 'adminLogin': result = adminLogin(payload.password); break;
+      case 'adminLogout': result = adminLogout(payload.token); break;
+      case 'adminGetDashboard': result = adminGetDashboard(payload.token); break;
+      case 'adminSetProviderStatus': result = adminSetProviderStatus(payload.token, payload.id, payload.status); break;
+      case 'adminConfirmPaymentAndApprove': result = adminConfirmPaymentAndApprove(payload.token, payload.id); break;
+      case 'adminSetProviderFeatured': result = adminSetProviderFeatured(payload.token, payload.id, payload.featured); break;
+      default: throw new Error('العملية المطلوبة غير معروفة.');
+    }
+    ok = true;
+  } catch (err) {
+    error = err && err.message ? String(err.message) : 'حدث خطأ غير متوقع في الخادم.';
+  }
+
+  var message = { type: 'daleelak-api-response', requestId: requestId, ok: ok };
+  if (ok) message.data = result;
+  else message.error = error;
+  return HtmlService.createHtmlOutput(buildApiResponseHtml_(message))
+    .setTitle('Daleelak API')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function buildApiResponseHtml_(message) {
+  // Fixed GitHub Pages origin; never accept a target origin from the request.
+  var targetOrigin = 'https://jomujahid007-boop.github.io';
+  var json = JSON.stringify(message)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+  return '<!doctype html><html><head><meta charset="utf-8"></head><body>' +
+    '<script>(function(){var m=' + json + ';' +
+    'try{window.parent.postMessage(m,' + JSON.stringify(targetOrigin) + ');}catch(e){}' +
+    '})();</script></body></html>';
+}
+
 function setupDatabase() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('افتح Google Sheet المرتبط بهذا المشروع أولاً.');
