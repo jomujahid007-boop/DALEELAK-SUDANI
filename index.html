@@ -326,7 +326,6 @@ function confirmPayment(id){
     showAdminMessage('adminNotice',language==='ar'?'تم تأكيد الدفع ونشر الإعلان بنجاح.':'Payment verified and listing published.',false);loadAdmin();load();
   }).catch(err=>showAdminMessage('adminNotice',err.message||'تعذر تأكيد الدفع.',true));
 }
-function paymentStatusArabic(status){
 function paymentStatusArabic(status){return ({Submitted:'بانتظار التحقق من الدفع',Verified:'تم التحقق من الدفع'})[status]||status}
 
 function toggleFeatured(id,value){
@@ -334,7 +333,6 @@ function toggleFeatured(id,value){
     showAdminMessage('adminNotice',value?'تم تمييز الخدمة.':'تم إلغاء تمييز الخدمة.',false);loadAdmin();load();
   }).catch(err=>showAdminMessage('adminNotice',err.message||'تعذر تحديث الخدمة.',true));
 }
-function statusArabic(status){
 function statusArabic(status){return ({Pending:'بانتظار المراجعة',Approved:'معتمد',Rejected:'مرفوض'})[status]||status}
 function statusLabel(status){return language==='en'?({Pending:tr('statusPending'),Approved:tr('statusApproved'),Rejected:tr('statusRejected')})[status]||status:statusArabic(status)}
 function paymentLabel(status){return language==='en'?({Submitted:tr('paymentPending'),Verified:tr('paymentVerified')})[status]||status:paymentStatusArabic(status)}
