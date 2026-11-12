@@ -125,26 +125,61 @@ function localizeFormCities(){const sel=document.querySelector('#listingForm sel
 let adminToken=sessionStorage.getItem('daleelakAdminToken')||'', adminRows=[], adminStatus='Pending';
 
 
+
+const API_URL='https://script.google.com/macros/s/AKfycbz5gHwgOYyRmD2bptRx8c7p3YmxmJC3lkgLyRDrJhYxaak4TpQQD2tpn1maWWcnl6--/exec';
+let apiSequence=0;
+const apiRequests=new Map();
+window.addEventListener('message',function(event){
+  const m=event.data;
+  if(!m||m.type!=='daleelak-api-response'||!m.requestId)return;
+  const pending=apiRequests.get(m.requestId);
+  if(!pending||event.source!==pending.iframe.contentWindow)return;
+  clearTimeout(pending.timer);apiRequests.delete(m.requestId);
+  pending.form.remove();pending.iframe.remove();
+  if(m.ok)pending.resolve(m.data);
+  else pending.reject(new Error(m.error||'حدث خطأ في الخادم.'));
+});
+function apiCall(action,payload={}){
+  return new Promise((resolve,reject)=>{
+    const requestId='dl_'+Date.now().toString(36)+'_'+(++apiSequence).toString(36);
+    const iframe=document.createElement('iframe');
+    iframe.name='daleelak_api_'+requestId;iframe.style.display='none';
+    iframe.setAttribute('aria-hidden','true');
+    const form=document.createElement('form');
+    form.method='POST';form.action=API_URL;form.target=iframe.name;form.style.display='none';
+    [['action',action],['requestId',requestId],['payload',JSON.stringify(payload||{})]].forEach(([name,value])=>{
+      const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input);
+    });
+    const timer=setTimeout(()=>{
+      apiRequests.delete(requestId);form.remove();iframe.remove();
+      reject(new Error('انتهت مهلة الاتصال بالخادم. تأكد من نشر آخر إصدار من Apps Script ثم أعد المحاولة.'));
+    },25000);
+    apiRequests.set(requestId,{resolve,reject,iframe,form,timer});
+    document.body.appendChild(iframe);document.body.appendChild(form);
+    try{form.submit();}catch(err){clearTimeout(timer);apiRequests.delete(requestId);form.remove();iframe.remove();reject(err);}
+  });
+}
+
 let loadTimer=null, loadRequestId=0, isLoaded=false;
 function showLoading(message){const el=document.getElementById('providers');el.innerHTML='<div class="empty"><span class="loading-mark"></span><strong>'+esc(message||tr('loading'))+'</strong>'+esc(language==='ar'?'نجهز لك الخدمات المتاحة…':'Preparing available services…')+'</div>';}
 function showLoadError(e){clearTimeout(loadTimer);const msg=(e&&e.message)?e.message:(language==='ar'?'تعذر الاتصال بالخادم.':'Could not connect to the server.');document.getElementById('categories').innerHTML='';document.getElementById('providers').innerHTML='<div class="empty"><strong>'+(language==='ar'?'تعذر تحميل الدليل':'Could not load directory')+'</strong>'+esc(msg)+'<div style="margin-top:14px"><button class="btn call" type="button" onclick="load()">'+(language==='ar'?'إعادة المحاولة':'Try again')+'</button></div><div class="section-note" style="margin-top:10px">'+(language==='ar'?'تأكد من فتح رابط تطبيق Google Apps Script المنشور، ثم أعد المحاولة.':'Open the deployed Google Apps Script web app URL, then retry.')+'</div></div>';}
 function load(){
   const requestId=++loadRequestId;isLoaded=false;showLoading(language==='ar'?'جاري تحميل الدليل':'Loading directory');
-  if(!(window.google&&google.script&&google.script.run)){showLoadError({message:language==='ar'?'افتح الدليل من رابط تطبيق Google Apps Script المنشور، وليس من معاينة ملف HTML.':'Open the deployed Google Apps Script web app URL, not an HTML preview.'});return;}
-  clearTimeout(loadTimer);loadTimer=setTimeout(()=>{if(requestId===loadRequestId&&!isLoaded)showLoadError({message:language==='ar'?'استغرق الاتصال وقتاً أطول من المتوقع. افحص اتصال الإنترنت ثم اضغط إعادة المحاولة.':'The server took too long to respond. Check your connection and retry.'});},15000);
-  try{
-    google.script.run.withSuccessHandler(d=>{
-      if(requestId!==loadRequestId)return;clearTimeout(loadTimer);isLoaded=true;
-      if(!d||!Array.isArray(d.categories)||!Array.isArray(d.providers)) {showLoadError({message:language==='ar'?'استجابة الخادم غير مكتملة.':'The server returned incomplete data.'});return;}
-      data=d;const city=document.getElementById('city');const cities=Array.isArray(data.cities)&&data.cities.length?data.cities:['كل المدن'];
-      city.innerHTML=cities.map(x=>`<option value="${attr(x)}">${esc(cityLabel(x))}</option>`).join('');
-      if(!cities.includes('كل المدن'))city.insertAdjacentHTML('afterbegin','<option value="كل المدن">'+(language==='ar'?'كل المدن':'All cities')+'</option>');
-      localizeFormCities();drawCategories();drawFormCategories();render();
-      document.getElementById('listingFee').textContent=data.listingFee||20;
-      document.getElementById('stcPayNumber').textContent=data.stcPayNumber|| (language==='ar'?'رقم الاستقبال غير متاح حالياً':'Payment number unavailable');
-    }).withFailureHandler(err=>{if(requestId===loadRequestId)showLoadError(err);}).getPublicData();
-  }catch(err){showLoadError(err);}
+  clearTimeout(loadTimer);
+  loadTimer=setTimeout(()=>{if(requestId===loadRequestId&&!isLoaded)showLoadError({message:language==='ar'?'استغرق الاتصال وقتاً أطول من المتوقع.':'The server took too long to respond.'});},26000);
+  apiCall('getPublicData').then(d=>{
+    if(requestId!==loadRequestId)return;clearTimeout(loadTimer);
+    if(!d||!Array.isArray(d.categories)||!Array.isArray(d.providers)){showLoadError({message:language==='ar'?'استجابة الخادم غير مكتملة.':'The server returned incomplete data.'});return;}
+    isLoaded=true;data=d;
+    const city=document.getElementById('city');const cities=Array.isArray(data.cities)&&data.cities.length?data.cities:['كل المدن'];
+    city.innerHTML=cities.map(x=>`<option value="${attr(x)}">${esc(cityLabel(x))}</option>`).join('');
+    if(!cities.includes('كل المدن'))city.insertAdjacentHTML('afterbegin','<option value="كل المدن">'+(language==='ar'?'كل المدن':'All cities')+'</option>');
+    localizeFormCities();drawCategories();drawFormCategories();render();
+    document.getElementById('listingFee').textContent=data.listingFee||20;
+    document.getElementById('stcPayNumber').textContent=data.stcPayNumber||(language==='ar'?'رقم الاستقبال غير متاح حالياً':'Payment number unavailable');
+  }).catch(err=>{if(requestId===loadRequestId){clearTimeout(loadTimer);showLoadError(err);}});
 }
+function drawCategories(){
 function drawCategories(){
   const el=document.getElementById('categories');const cats=Array.isArray(data.categories)?data.categories:[];
   if(!cats.length){el.innerHTML='<div class="empty">'+(language==='ar'?'لا توجد أقسام مفعّلة حالياً.':'No active categories yet.')+'</div>';return;}
@@ -180,15 +215,15 @@ function submitForm(e){
   e.preventDefault();const form=e.target,btn=document.getElementById('sendBtn');
   const payload=Object.fromEntries(new FormData(form).entries());
   btn.disabled=true;btn.textContent='جاري الإرسال...';
-  google.script.run.withSuccessHandler(r=>{
+  apiCall('submitProviderListing',payload).then(r=>{
     const n=document.getElementById('notice');n.style.display='block';n.style.background='#e7f5eb';n.style.color='#185b35';n.textContent=r.message;
     form.reset();btn.disabled=false;btn.textContent='إرسال الإعلان ورقم العملية';
-  }).withFailureHandler(err=>{
+  }).catch(err=>{
     const n=document.getElementById('notice');n.style.display='block';n.style.background='#fff0ed';n.style.color='#9b2d1c';n.textContent=err.message||'حدث خطأ، حاول مرة أخرى.';
     btn.disabled=false;btn.textContent='إرسال الإعلان ورقم العملية';
-  }).submitProviderListing(payload);
+  });
 }
-
+function openAdminLogin(){
 function openAdminLogin(){
   document.getElementById('loginNotice').style.display='none';
   document.getElementById('adminLoginModal').style.display='block';
@@ -201,17 +236,18 @@ function closeAdminLogin(){
 }
 function loginAdmin(e){
   e.preventDefault();
-  const btn=document.getElementById('loginButton'), password=document.getElementById('adminPassword').value;
+  const btn=document.getElementById('loginButton'),password=document.getElementById('adminPassword').value;
   btn.disabled=true;btn.textContent='جاري التحقق...';
-  google.script.run.withSuccessHandler(r=>{
+  apiCall('adminLogin',{password}).then(r=>{
     adminToken=r.token;sessionStorage.setItem('daleelakAdminToken',adminToken);
     document.getElementById('adminPassword').value='';
     btn.disabled=false;btn.textContent='دخول';closeAdminLogin();showAdmin();loadAdmin();
-  }).withFailureHandler(err=>{
+  }).catch(err=>{
     showAdminMessage('loginNotice',err.message||'تعذر تسجيل الدخول.',true);
     btn.disabled=false;btn.textContent='دخول';
-  }).adminLogin(password);
+  });
 }
+function showAdmin(){
 function showAdmin(){
   closeForm();closeAdminLogin();
   document.getElementById('publicHeader').style.display='none';
@@ -230,21 +266,22 @@ function showPublic(){
 function logoutAdmin(){
   const oldToken=adminToken;
   adminToken='';sessionStorage.removeItem('daleelakAdminToken');adminRows=[];
-  if(oldToken)google.script.run.adminLogout(oldToken);
+  if(oldToken)apiCall('adminLogout',{token:oldToken}).catch(()=>{});
   showPublic();
 }
 function loadAdmin(){
   if(!adminToken){openAdminLogin();return;}
   document.getElementById('adminList').innerHTML='<div class="empty">جاري تحميل الطلبات...</div>';
-  google.script.run.withSuccessHandler(rows=>{
+  apiCall('adminGetDashboard',{token:adminToken}).then(rows=>{
     adminRows=Array.isArray(rows)?rows:[];
     updateAdminCounts();renderAdminRows();
-  }).withFailureHandler(err=>{
+  }).catch(err=>{
     if((err.message||'').includes('انتهت جلسة الإدارة')){
       adminToken='';sessionStorage.removeItem('daleelakAdminToken');showAdmin();openAdminLogin();
     } else showAdminMessage('adminNotice',err.message||'تعذر تحميل الطلبات.',true);
-  }).adminGetDashboard(adminToken);
+  });
 }
+function updateAdminCounts(){
 function updateAdminCounts(){
   ['Pending','Approved','Rejected'].forEach(status=>{
     const count=adminRows.filter(x=>x.status.toLowerCase()===status.toLowerCase()).length;
@@ -282,27 +319,26 @@ function renderAdminRows(){
 function changeStatus(id,status){
   if(status==='Rejected'&&!confirm('هل تريد رفض هذا الطلب؟'))return;
   if(status==='Approved'&&!confirm('سيظهر هذا الإعلان للزوار بعد القبول. هل تريد المتابعة؟'))return;
-  google.script.run.withSuccessHandler(()=>{
+  apiCall('adminSetProviderStatus',{token:adminToken,id,status}).then(()=>{
     showAdminMessage('adminNotice','تم تحديث حالة الطلب بنجاح.',false);loadAdmin();
     if(status==='Approved')load();
-  }).withFailureHandler(err=>showAdminMessage('adminNotice',err.message||'تعذر تحديث الطلب.',true))
-    .adminSetProviderStatus(adminToken,id,status);
+  }).catch(err=>showAdminMessage('adminNotice',err.message||'تعذر تحديث الطلب.',true));
 }
 function confirmPayment(id){
   if(!confirm('تأكدت من وصول 20 ريال في حساب STC Pay وأن رقم العملية مطابق؟ بعد التأكيد سيُنشر الإعلان مباشرة.'))return;
-  google.script.run.withSuccessHandler(()=>{
+  apiCall('adminConfirmPaymentAndApprove',{token:adminToken,id}).then(()=>{
     showAdminMessage('adminNotice',language==='ar'?'تم تأكيد الدفع ونشر الإعلان بنجاح.':'Payment verified and listing published.',false);loadAdmin();load();
-  }).withFailureHandler(err=>showAdminMessage('adminNotice',err.message||'تعذر تأكيد الدفع.',true))
-    .adminConfirmPaymentAndApprove(adminToken,id);
+  }).catch(err=>showAdminMessage('adminNotice',err.message||'تعذر تأكيد الدفع.',true));
 }
+function paymentStatusArabic(status){
 function paymentStatusArabic(status){return ({Submitted:'بانتظار التحقق من الدفع',Verified:'تم التحقق من الدفع'})[status]||status}
 
 function toggleFeatured(id,value){
-  google.script.run.withSuccessHandler(()=>{
+  apiCall('adminSetProviderFeatured',{token:adminToken,id,featured:value}).then(()=>{
     showAdminMessage('adminNotice',value?'تم تمييز الخدمة.':'تم إلغاء تمييز الخدمة.',false);loadAdmin();load();
-  }).withFailureHandler(err=>showAdminMessage('adminNotice',err.message||'تعذر تحديث الخدمة.',true))
-    .adminSetProviderFeatured(adminToken,id,value);
+  }).catch(err=>showAdminMessage('adminNotice',err.message||'تعذر تحديث الخدمة.',true));
 }
+function statusArabic(status){
 function statusArabic(status){return ({Pending:'بانتظار المراجعة',Approved:'معتمد',Rejected:'مرفوض'})[status]||status}
 function statusLabel(status){return language==='en'?({Pending:tr('statusPending'),Approved:tr('statusApproved'),Rejected:tr('statusRejected')})[status]||status:statusArabic(status)}
 function paymentLabel(status){return language==='en'?({Submitted:tr('paymentPending'),Verified:tr('paymentVerified')})[status]||status:paymentStatusArabic(status)}
