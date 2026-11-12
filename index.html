@@ -180,7 +180,6 @@ function load(){
   }).catch(err=>{if(requestId===loadRequestId){clearTimeout(loadTimer);showLoadError(err);}});
 }
 function drawCategories(){
-function drawCategories(){
   const el=document.getElementById('categories');const cats=Array.isArray(data.categories)?data.categories:[];
   if(!cats.length){el.innerHTML='<div class="empty">'+(language==='ar'?'لا توجد أقسام مفعّلة حالياً.':'No active categories yet.')+'</div>';return;}
   el.innerHTML=cats.map(c=>`<button class="cat ${activeCategory===c?'active':''}" type="button" data-category="${attr(c)}"><span class="ico">${categoryIcons[c]||'✨'}</span><span>${esc(categoryLabel(c))}</span></button>`).join('');
@@ -224,7 +223,6 @@ function submitForm(e){
   });
 }
 function openAdminLogin(){
-function openAdminLogin(){
   document.getElementById('loginNotice').style.display='none';
   document.getElementById('adminLoginModal').style.display='block';
   document.body.style.overflow='hidden';
@@ -247,7 +245,6 @@ function loginAdmin(e){
     btn.disabled=false;btn.textContent='دخول';
   });
 }
-function showAdmin(){
 function showAdmin(){
   closeForm();closeAdminLogin();
   document.getElementById('publicHeader').style.display='none';
@@ -281,7 +278,6 @@ function loadAdmin(){
     } else showAdminMessage('adminNotice',err.message||'تعذر تحميل الطلبات.',true);
   });
 }
-function updateAdminCounts(){
 function updateAdminCounts(){
   ['Pending','Approved','Rejected'].forEach(status=>{
     const count=adminRows.filter(x=>x.status.toLowerCase()===status.toLowerCase()).length;
