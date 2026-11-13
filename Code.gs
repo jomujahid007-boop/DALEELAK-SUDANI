@@ -585,13 +585,30 @@ function passwordHash_(password, salt) {
 
 function pbkdf2Hash_(password, salt, iterations) {
   const rounds = Math.max(10000, Math.min(Number(iterations) || 12000, 200000));
-  const key = String(password);
-  let u = Utilities.computeHmacSha256Signature(String(salt) + '\x00\x00\x00\x01', key, Utilities.Charset.UTF_8);
+
+  // Use the byte[] overload for PBKDF2's binary HMAC input (U2..Un).
+  const keyBytes = Utilities.newBlob(String(password)).getBytes();
+  const saltBytes = Utilities.newBlob(String(salt)).getBytes();
+  const blockInput = saltBytes.concat([0, 0, 0, 1]);
+
+  let u = Utilities.computeHmacSignature(
+    Utilities.MacAlgorithm.HMAC_SHA_256,
+    blockInput,
+    keyBytes
+  );
   const derived = u.slice();
+
   for (let i = 1; i < rounds; i++) {
-    u = Utilities.computeHmacSha256Signature(u, key);
-    for (let j = 0; j < derived.length; j++) derived[j] = derived[j] ^ u[j];
+    u = Utilities.computeHmacSignature(
+      Utilities.MacAlgorithm.HMAC_SHA_256,
+      u,
+      keyBytes
+    );
+    for (let j = 0; j < derived.length; j++) {
+      derived[j] = derived[j] ^ u[j];
+    }
   }
+
   return Utilities.base64Encode(derived);
 }
 
