@@ -347,7 +347,7 @@ function providerCard(p){
   const expandable=description.length>112;
   const categoryIcon=categoryIcons[p.category]||'✨';
   return `<article class="provider">
-    ${Array.isArray(p.images)&&p.images.length?'<div class="provider-gallery"><button type="button" onclick="openPhotoViewer('+JSON.stringify(p.images).replace(/"/g,'&quot;')+',0)" aria-label="تكبير صور الإعلان"><img class="provider-gallery-main" src="'+attr(p.images[0])+'" alt="'+attr(p.name)+'"></button>'+(p.images.length>1?'<div class="provider-gallery-strip">'+p.images.slice(1,4).map((url,i)=>'<button type="button" onclick="openPhotoViewer('+JSON.stringify(p.images).replace(/"/g,'&quot;')+','+(i+1)+')" aria-label="عرض الصورة رقم '+(i+2)+'"><img src="'+attr(url)+'" alt=""></button>').join('')+'</div>':'')+'<div class="provider-gallery-count">اضغط للتكبير · '+p.images.length+'/4</div></div>':'<div class="provider-thumb" aria-hidden="true">'+esc(categoryIcon)+'</div>'}
+    ${Array.isArray(p.images)&&p.images.length?'<div class="provider-gallery"><button type="button" onclick="openPhotoViewer('+JSON.stringify(p.images).replace(/"/g,'&quot;')+',0)" aria-label="تكبير صور الإعلان"><img class="provider-gallery-main" src="'+attr(directImageUrl(p.images[0]))+'" alt="'+attr(p.name)+'"></button>'+(p.images.length>1?'<div class="provider-gallery-strip">'+p.images.slice(1,4).map((url,i)=>'<button type="button" onclick="openPhotoViewer('+JSON.stringify(p.images).replace(/"/g,'&quot;')+','+(i+1)+')" aria-label="عرض الصورة رقم '+(i+2)+'"><img src="'+attr(directImageUrl(url))+'" alt=""></button>').join('')+'</div>':'')+'<div class="provider-gallery-count">اضغط للتكبير · '+p.images.length+'/4</div></div>':'<div class="provider-thumb" aria-hidden="true">'+esc(categoryIcon)+'</div>'}
     <div class="provider-content">
       <span class="pill">${esc(categoryLabel(p.category))}</span>${p.featured?` <span class="pill featured-label">${tr('featured')}</span>`:''}
       <h3>${esc(p.name)}</h3>
@@ -372,6 +372,12 @@ function render(){
   el.innerHTML=regular.map(providerCard).join('');
 }
 let photoViewerItems=[],photoViewerIndex=0;
+function directImageUrl(url){
+  const value=String(url||'').trim();
+  const match=value.match(/[?&]id=([A-Za-z0-9_-]{10,})/)||value.match(/\/d\/([A-Za-z0-9_-]{10,})/);
+  if(match)return 'https://drive.google.com/thumbnail?id='+encodeURIComponent(match[1])+'&sz=w2000';
+  return value;
+}
 function openPhotoViewer(images,index){
   photoViewerItems=Array.isArray(images)?images.filter(Boolean).slice(0,4):[];
   if(!photoViewerItems.length)return;
@@ -381,7 +387,7 @@ function openPhotoViewer(images,index){
   document.body.style.overflow='hidden';
 }
 function updatePhotoViewer(){
-  document.getElementById('photoLightboxImage').src=photoViewerItems[photoViewerIndex];
+  document.getElementById('photoLightboxImage').src=directImageUrl(photoViewerItems[photoViewerIndex]);
   document.getElementById('photoLightboxCounter').textContent=(photoViewerIndex+1)+' / '+photoViewerItems.length;
   document.querySelectorAll('.photo-lightbox-nav').forEach(btn=>btn.style.display=photoViewerItems.length>1?'grid':'none');
 }
