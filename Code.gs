@@ -379,8 +379,8 @@ function adminSetProviderStatus(token, id, status) {
     if (!row) throw new Error('لم يتم العثور على الطلب. حدّث القائمة وحاول مرة أخرى.');
     const paymentStatusCol = headers.indexOf('PaymentStatus') + 1;
     const paymentStatus = paymentStatusCol ? String(sh.getRange(row, paymentStatusCol).getValue() || '') : '';
-    if (status === 'Approved' && paymentStatus !== 'Verified') {
-      throw new Error('لا يمكن نشر الإعلان قبل تأكيد الدفع الفعلي من زر «تأكيد الدفع ونشر الإعلان».');
+    if (status === 'Approved' && paymentStatus && paymentStatus !== 'Verified') {
+      throw new Error('لا يمكن نشر الإعلان قبل تأكيد الدفع من زر «تأكيد الدفع ونشر الإعلان».');
     }
     sh.getRange(row, statusCol).setValue(status);
     return { ok: true, status: status };
@@ -708,8 +708,8 @@ function saveProviderImages_(images, listingId) {
     prepared.forEach(item => {
       const blob = Utilities.newBlob(item.bytes, item.mime, item.name);
       const file = folder.createFile(blob);
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       ids.push(file.getId());
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     });
     return ids;
   } catch (err) {
