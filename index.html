@@ -115,15 +115,48 @@ body[dir="ltr"] .add{inset-inline-start:auto;inset-inline-end:22px}
 }
 
 
-/* Brand title font: Alexandria */
-.brand{font-family:'Alexandria',Tahoma,Arial,sans-serif;font-weight:800;letter-spacing:0}
+/* Unified geometric brand typography */
+.brand-block{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+.brand-block .brand,.brand-block .brand-english,.brand-block .brand-tagline{
+  font-family:'Alexandria',Tahoma,Arial,sans-serif!important;
+  font-style:normal;
+  text-rendering:optimizeLegibility;
+}
+.brand-block .brand{
+  font-size:clamp(25px,2.65vw,35px);
+  font-weight:900;
+  line-height:1.38;
+  letter-spacing:-.7px;
+}
+.brand-block .brand-english{
+  margin-top:1px;
+  font-size:clamp(13px,1.35vw,16px);
+  font-weight:700;
+  line-height:1.5;
+  letter-spacing:.35px;
+  color:#e4f2e9;
+}
+.brand-block .brand-tagline{
+  margin-top:3px;
+  font-size:clamp(12px,1.25vw,15px);
+  font-weight:600;
+  line-height:1.65;
+  letter-spacing:0;
+  color:#d6e9de;
+}
+@media(max-width:680px){
+  .brand-block{gap:0}
+  .brand-block .brand{font-size:24px;letter-spacing:-.45px}
+  .brand-block .brand-english{font-size:13px;letter-spacing:.2px}
+  .brand-block .brand-tagline{font-size:12px;margin-top:2px}
+}
 </style>
 </head>
 <body>
 <header class="site-header" id="publicHeader">
   <div class="header-inner">
     <div class="topbar">
-      <div class="brand-block"><div class="brand" data-i18n="brand">دليلك السوداني</div><div class="tag" data-i18n="tagline">خدمات أهلنا في مكان واحد</div></div>
+      <div class="brand-block" aria-label="دليلك السوداني — Your Sudanese Guide — كل خدماتك .. في مكان واحد"><div class="brand">دليلك السوداني</div><div class="brand-english" lang="en" dir="ltr">Your Sudanese Guide</div><div class="brand-tagline">كل خدماتك .. في مكان واحد</div></div>
       <div class="top-actions">
         <button class="top-control" id="languageButton" type="button" onclick="toggleLanguage()">🌐 English</button>
         <button class="top-control" id="themeButton" type="button" onclick="toggleTheme()">🌙 ليلي</button>
