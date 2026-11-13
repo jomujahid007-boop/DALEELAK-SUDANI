@@ -199,8 +199,6 @@ function load(){
     city.innerHTML=cities.map(x=>`<option value="${attr(x)}">${esc(cityLabel(x))}</option>`).join('');
     if(!cities.includes('كل المدن'))city.insertAdjacentHTML('afterbegin','<option value="كل المدن">'+(language==='ar'?'كل المدن':'All cities')+'</option>');
     localizeFormCities();drawCategories();drawFormCategories();render();
-    document.getElementById('listingFee').textContent=data.listingFee||20;
-    document.getElementById('listingFee').textContent=data.listingFee||20;
   }).catch(err=>{if(requestId===loadRequestId){clearTimeout(loadTimer);showLoadError(err);}});
 }
 function drawCategories(){
