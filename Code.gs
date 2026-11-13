@@ -87,7 +87,8 @@ function buildApiResponseHtml_(message) {
     .replace(/\u2029/g, '\\u2029');
   return '<!doctype html><html><head><meta charset="utf-8"></head><body>' +
     '<script>(function(){var m=' + json + ';' +
-    'try{window.parent.postMessage(m,' + JSON.stringify(targetOrigin) + ');}catch(e){}' +
+    'try{window.top.postMessage(m,' + JSON.stringify(targetOrigin) + ');}' +
+    'catch(e){try{window.parent.postMessage(m,' + JSON.stringify(targetOrigin) + ');}catch(e2){}}' +
     '})();</script></body></html>';
 }
 
