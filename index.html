@@ -175,7 +175,7 @@ function load(){
     if(requestId!==loadRequestId)return;clearTimeout(loadTimer);
     if(!d||!Array.isArray(d.categories)||!Array.isArray(d.providers)){showLoadError({message:language==='ar'?'استجابة الخادم غير مكتملة.':'The server returned incomplete data.'});return;}
     isLoaded=true;data=d;
-    const city=document.getElementById('city');const cities=Array.from(new Set(['كل المدن',...saudiCities,...(Array.isArray(data.cities)?data.cities:[])]));
+    const city=document.getElementById('city');const cities=Array.from(new Set(['كل المدن',...saudiCities,...(Array.isArray(data.cities)?data.cities:[]),...(Array.isArray(data.providers)?data.providers.map(p=>String(p.city||'').trim()).filter(Boolean):[])]));
     city.innerHTML=cities.map(x=>`<option value="${attr(x)}">${esc(cityLabel(x))}</option>`).join('');
     if(!cities.includes('كل المدن'))city.insertAdjacentHTML('afterbegin','<option value="كل المدن">'+(language==='ar'?'كل المدن':'All cities')+'</option>');
     localizeFormCities();drawCategories();drawFormCategories();render();
