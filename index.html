@@ -57,13 +57,27 @@ body[dir="ltr"] .add{inset-inline-start:auto;inset-inline-end:22px}
  .section-head{align-items:flex-start}
  .listing-tools{width:100%;justify-content:space-between}
  .view-switch button{min-height:34px;padding:5px 9px}
+ /* Grid mode: two compact cards side by side on phones */
+ .cards:not(.view-list),.featured-grid:not(.view-list){grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .cards:not(.view-list) .provider,.featured-grid:not(.view-list) .provider{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:9px}
+ .cards:not(.view-list) .provider-thumb,.featured-grid:not(.view-list) .provider-thumb{grid-column:1;grid-row:auto;width:100%;height:62px;aspect-ratio:auto;border-radius:10px;font-size:25px}
+ .cards:not(.view-list) .provider-content,.featured-grid:not(.view-list) .provider-content{grid-column:1}
+ .cards:not(.view-list) .provider-content h3,.featured-grid:not(.view-list) .provider-content h3{font-size:12px;line-height:1.5}
+ .cards:not(.view-list) .provider-content .meta,.featured-grid:not(.view-list) .provider-content .meta{font-size:10px;line-height:1.6}
+ .cards:not(.view-list) .provider-content .desc,.featured-grid:not(.view-list) .provider-content .desc{font-size:11px;line-height:1.7;margin:5px 0 2px}
+ .cards:not(.view-list) .provider .actions,.featured-grid:not(.view-list) .provider .actions{grid-column:1;display:flex;flex-wrap:wrap;gap:5px}
+ .cards:not(.view-list) .provider .btn,.featured-grid:not(.view-list) .provider .btn{flex:1 1 100%;min-height:32px;padding:5px 7px;font-size:10px}
  .provider{grid-template-columns:68px minmax(0,1fr);gap:10px;padding:11px}
  .provider-thumb{width:68px;border-radius:12px;font-size:27px}
  .provider-content h3{font-size:14px}
  .provider .actions{gap:6px}
  .provider .btn{min-height:34px;padding:6px 9px}
- .cards.view-list .provider,.featured-grid.view-list .provider{grid-template-columns:76px minmax(0,1fr);gap:11px;padding:12px}
- .cards.view-list .provider-thumb,.featured-grid.view-list .provider-thumb{width:76px}
+ /* List mode: one full-width horizontal card */
+ .cards.view-list,.featured-grid.view-list{grid-template-columns:minmax(0,1fr)}
+ .cards.view-list .provider,.featured-grid.view-list .provider{display:grid;grid-template-columns:76px minmax(0,1fr);gap:11px;padding:12px}
+ .cards.view-list .provider-thumb,.featured-grid.view-list .provider-thumb{grid-column:1;grid-row:1 / span 2;width:76px;height:auto;aspect-ratio:1}
+ .cards.view-list .provider-content,.featured-grid.view-list .provider-content{grid-column:2}
+ .cards.view-list .provider .actions,.featured-grid.view-list .provider .actions{grid-column:2}
 }
 
 </style>
