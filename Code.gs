@@ -34,6 +34,19 @@ function doGet(e) {
   // Avoids hidden-iframe postMessage failures on some mobile browsers.
   var params = e && e.parameter ? e.parameter : {};
   var callback = String(params.callback || '');
+
+  // One-time result retrieval for sensitive POST actions such as admin login.
+  // Only the random request ID is sent in the URL; passwords and tokens stay
+  // in the POST body and the cached response is removed after retrieval.
+  var resultRequestId = String(params.requestId || '');
+  if (params.action === 'getApiResult' &&
+      /^daleelakJsonp_[A-Za-z0-9_]{8,80}$/.test(callback) &&
+      /^[A-Za-z0-9_-]{8,100}$/.test(resultRequestId)) {
+    var cachedResult = CacheService.getScriptCache().get('daleelak_api_result_' + resultRequestId);
+    if (cachedResult) CacheService.getScriptCache().remove('daleelak_api_result_' + resultRequestId);
+    return ContentService.createTextOutput(callback + '(' + (cachedResult || 'null') + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   if (params.action === 'getPublicData' && /^daleelakJsonp_[A-Za-z0-9_]{8,80}$/.test(callback)) {
     var publicData;
     try {
@@ -98,6 +111,22 @@ function doPost(e) {
   var message = { type: 'daleelak-api-response', requestId: requestId, ok: ok };
   if (ok) message.data = result;
   else message.error = error;
+
+  // Admin login uses a one-time JSONP result poll instead of iframe messaging.
+  // This avoids losing the response across Google's cross-origin redirects.
+  // The password is never placed in the URL; only the random request ID is.
+  if (action === 'adminLogin' && /^[A-Za-z0-9_-]{8,100}$/.test(requestId)) {
+    CacheService.getScriptCache().put(
+      'daleelak_api_result_' + requestId,
+      JSON.stringify(message).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')
+        .replace(/&/g, '\\u0026').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029'),
+      120
+    );
+    return HtmlService.createHtmlOutput('<!doctype html><html><body>تم استلام الطلب.</body></html>')
+      .setTitle('Daleelak API')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   return HtmlService.createHtmlOutput(buildApiResponseHtml_(message))
     .setTitle('Daleelak API')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
