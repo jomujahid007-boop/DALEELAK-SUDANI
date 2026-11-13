@@ -216,6 +216,7 @@ let theme=localStorage.getItem('daleelakTheme')||'light';
 let data={categories:[],providers:[],cities:[]}, activeCategory='';
 let listingView=localStorage.getItem('daleelakListingView')==='list'?'list':'grid';
 let currentListingId='', selectedPaymentMethod='';
+let selectedListingImages=[];
 function tr(k){return (words[language]&&words[language][k])||words.ar[k]||k}
 function applyListingView(){
   ['providers','featuredProviders'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.toggle('view-list',listingView==='list');});
