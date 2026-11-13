@@ -535,7 +535,7 @@ function passwordHash_(password, salt) {
 function pbkdf2Hash_(password, salt, iterations) {
   const rounds = Math.max(10000, Math.min(Number(iterations) || 12000, 200000));
   const key = String(password);
-  let u = Utilities.computeHmacSha256Signature(String(salt) + '\\x00\\x00\\x00\\x01', key, Utilities.Charset.UTF_8);
+  let u = Utilities.computeHmacSha256Signature(String(salt) + '\x00\x00\x00\x01', key, Utilities.Charset.UTF_8);
   const derived = u.slice();
   for (let i = 1; i < rounds; i++) {
     u = Utilities.computeHmacSha256Signature(u, key);
@@ -553,7 +553,7 @@ function constantTimeEqual_(left, right) {
 }
 
 function normalizePaymentReference_(value) {
-  return String(value || '').replace(/\\s+/g, '').toUpperCase();
+  return String(value || '').replace(/\s+/g, '').toUpperCase();
 }
 
 function listingRateKeys_(phoneDigits) {
@@ -689,7 +689,7 @@ function saveProviderImages_(images, listingId) {
   }
   const prepared = images.map((item, index) => {
     if (!item || typeof item.data !== 'string') throw new Error('إحدى الصور غير صالحة.');
-    const match = item.data.match(/^data:(image\\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+    const match = item.data.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
     if (!match) throw new Error('يسمح فقط بصور JPG أو PNG أو WEBP.');
     if (match[2].length > 430000) throw new Error('حجم إحدى الصور كبير. اختر صوراً أصغر.');
     const bytes = Utilities.base64Decode(match[2]);
