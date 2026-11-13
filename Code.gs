@@ -221,11 +221,11 @@ function submitProviderListing(form) {
       imageIds = saveProviderImages_(form.images || [], id);
       record.Images = JSON.stringify(imageIds);
       sh.appendRow(headers.map(h => Object.prototype.hasOwnProperty.call(record, h) ? record[h] : ''));
-      recordListingSubmission_(phoneDigits);
     } catch (err) {
       trashProviderImages_(imageIds);
       throw err;
     }
+    recordListingSubmission_(phoneDigits);
     return { ok: true, listingId: id, message: 'تم تسجيل بيانات إعلانك. أكمل الدفع في الصفحة التالية لإرسال الطلب للمراجعة.' };
   } finally { lock.releaseLock(); }
 }
