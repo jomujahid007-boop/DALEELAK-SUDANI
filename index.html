@@ -30,6 +30,19 @@ body[dir="ltr"] .add{inset-inline-start:auto;inset-inline-end:22px}
 .image-preview-item img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
 .image-preview-item button{position:absolute;top:4px;inset-inline-end:4px;width:25px;height:25px;border:0;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;font-weight:900;cursor:pointer}
 .provider-gallery{grid-column:1;grid-row:1 / span 2;width:82px;min-width:0}
+.provider-gallery button{display:block;padding:0;border:0;background:transparent;cursor:zoom-in}
+.provider-gallery button:focus-visible{outline:3px solid var(--green);outline-offset:3px;border-radius:12px}
+.photo-lightbox{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(8,14,12,.92);backdrop-filter:blur(5px)}
+.photo-lightbox.open{display:flex}
+.photo-lightbox-inner{position:relative;display:flex;align-items:center;justify-content:center;width:min(100%,1000px);height:min(88vh,850px)}
+.photo-lightbox-image{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:12px;box-shadow:0 18px 70px rgba(0,0,0,.45)}
+.photo-lightbox-close,.photo-lightbox-nav{position:absolute;display:grid;place-items:center;width:44px;height:44px;border:1px solid rgba(255,255,255,.28);border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:27px;line-height:1;cursor:pointer}
+.photo-lightbox-close{top:8px;inset-inline-end:8px}
+.photo-lightbox-nav.prev{inset-inline-start:8px}
+.photo-lightbox-nav.next{inset-inline-end:8px}
+.photo-lightbox-counter{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);padding:6px 12px;border-radius:20px;background:rgba(0,0,0,.6);color:#fff;font-size:13px}
+@media(max-width:600px){.photo-lightbox{padding:12px}.photo-lightbox-inner{height:84vh}.photo-lightbox-close,.photo-lightbox-nav{width:40px;height:40px}}
+
 .provider-gallery-main{display:block;width:100%;height:82px;object-fit:cover;border-radius:14px;border:1px solid var(--line);background:var(--surface-2)}
 .provider-gallery-count{margin-top:4px;color:var(--muted);font-size:10px;text-align:center}
 .provider-gallery a{display:block}
@@ -167,6 +180,16 @@ body[dir="ltr"] .add{inset-inline-start:auto;inset-inline-end:22px}
         <div class="payment-box"><strong>رسوم نشر الإعلان: 20 ريال</strong><div>بعد تسجيل بيانات الإعلان ستنتقل إلى صفحة مستقلة لاختيار طريقة الدفع.</div></div>
         <button class="submit" id="sendBtn" type="submit" data-i18n="sendListing">التالي: اختيار طريقة الدفع</button>
       </form>
+    </div>
+  </div>
+
+  <div id="photoLightbox" class="photo-lightbox" role="dialog" aria-modal="true" aria-label="عرض صور الإعلان" onclick="if(event.target===this)closePhotoViewer()">
+    <div class="photo-lightbox-inner">
+      <button class="photo-lightbox-close" type="button" onclick="closePhotoViewer()" aria-label="إغلاق">×</button>
+      <button class="photo-lightbox-nav prev" type="button" onclick="stepPhotoViewer(-1)" aria-label="الصورة السابقة">‹</button>
+      <img id="photoLightboxImage" class="photo-lightbox-image" src="" alt="صورة الإعلان">
+      <button class="photo-lightbox-nav next" type="button" onclick="stepPhotoViewer(1)" aria-label="الصورة التالية">›</button>
+      <div id="photoLightboxCounter" class="photo-lightbox-counter"></div>
     </div>
   </div>
 
@@ -324,7 +347,7 @@ function providerCard(p){
   const expandable=description.length>112;
   const categoryIcon=categoryIcons[p.category]||'✨';
   return `<article class="provider">
-    ${Array.isArray(p.images)&&p.images.length?'<div class="provider-gallery"><a href="'+attr(p.images[0])+'" target="_blank" rel="noopener noreferrer"><img class="provider-gallery-main" src="'+attr(p.images[0])+'" alt="'+attr(p.name)+'"></a>'+(p.images.length>1?'<div class="provider-gallery-strip">'+p.images.slice(1,4).map(url=>'<a href="'+attr(url)+'" target="_blank" rel="noopener noreferrer"><img src="'+attr(url)+'" alt=""></a>').join('')+'</div>':'')+'<div class="provider-gallery-count">'+p.images.length+'/4</div></div>':'<div class="provider-thumb" aria-hidden="true">'+esc(categoryIcon)+'</div>'}
+    ${Array.isArray(p.images)&&p.images.length?'<div class="provider-gallery"><button type="button" onclick="openPhotoViewer('+JSON.stringify(p.images).replace(/"/g,'&quot;')+',0)" aria-label="تكبير صور الإعلان"><img class="provider-gallery-main" src="'+attr(p.images[0])+'" alt="'+attr(p.name)+'"></button>'+(p.images.length>1?'<div class="provider-gallery-strip">'+p.images.slice(1,4).map((url,i)=>'<button type="button" onclick="openPhotoViewer('+JSON.stringify(p.images).replace(/"/g,'&quot;')+','+(i+1)+')" aria-label="عرض الصورة رقم '+(i+2)+'"><img src="'+attr(url)+'" alt=""></button>').join('')+'</div>':'')+'<div class="provider-gallery-count">اضغط للتكبير · '+p.images.length+'/4</div></div>':'<div class="provider-thumb" aria-hidden="true">'+esc(categoryIcon)+'</div>'}
     <div class="provider-content">
       <span class="pill">${esc(categoryLabel(p.category))}</span>${p.featured?` <span class="pill featured-label">${tr('featured')}</span>`:''}
       <h3>${esc(p.name)}</h3>
@@ -348,6 +371,37 @@ function render(){
   if(!matches.length){el.innerHTML='<div class="empty"><strong>'+tr('noResults')+'</strong>'+(language==='ar'?'جرّب تغيير كلمة البحث أو اختيار مدينة أخرى.':'Try another search term or city.')+'</div>';return;}
   el.innerHTML=regular.map(providerCard).join('');
 }
+let photoViewerItems=[],photoViewerIndex=0;
+function openPhotoViewer(images,index){
+  photoViewerItems=Array.isArray(images)?images.filter(Boolean).slice(0,4):[];
+  if(!photoViewerItems.length)return;
+  photoViewerIndex=Math.max(0,Math.min(Number(index)||0,photoViewerItems.length-1));
+  updatePhotoViewer();
+  document.getElementById('photoLightbox').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function updatePhotoViewer(){
+  document.getElementById('photoLightboxImage').src=photoViewerItems[photoViewerIndex];
+  document.getElementById('photoLightboxCounter').textContent=(photoViewerIndex+1)+' / '+photoViewerItems.length;
+  document.querySelectorAll('.photo-lightbox-nav').forEach(btn=>btn.style.display=photoViewerItems.length>1?'grid':'none');
+}
+function stepPhotoViewer(direction){
+  if(!photoViewerItems.length)return;
+  photoViewerIndex=(photoViewerIndex+direction+photoViewerItems.length)%photoViewerItems.length;
+  updatePhotoViewer();
+}
+function closePhotoViewer(){
+  document.getElementById('photoLightbox').classList.remove('open');
+  document.getElementById('photoLightboxImage').src='';
+  photoViewerItems=[];document.body.style.overflow='';
+}
+document.addEventListener('keydown',function(e){
+  if(!document.getElementById('photoLightbox')?.classList.contains('open'))return;
+  if(e.key==='Escape')closePhotoViewer();
+  else if(e.key==='ArrowLeft')stepPhotoViewer(1);
+  else if(e.key==='ArrowRight')stepPhotoViewer(-1);
+});
+
 function openForm(){document.getElementById('modal').style.display='block';document.body.style.overflow='hidden'}
 function closeForm(){document.getElementById('modal').style.display='none';document.body.style.overflow=''}
 async function handleListingImages(fileList){
