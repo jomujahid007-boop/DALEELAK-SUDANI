@@ -76,6 +76,7 @@ function doPost(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+
 function buildApiResponseHtml_(message) {
   // Fixed GitHub Pages origin; never accept a target origin from the request.
   var targetOrigin = 'https://jomujahid007-boop.github.io';
@@ -85,12 +86,14 @@ function buildApiResponseHtml_(message) {
     .replace(/&/g, '\\u0026')
     .replace(/\u2028/g, '\\u2028')
     .replace(/\u2029/g, '\\u2029');
+
   return '<!doctype html><html><head><meta charset="utf-8"></head><body>' +
     '<script>(function(){var m=' + json + ';' +
     'try{window.top.postMessage(m,' + JSON.stringify(targetOrigin) + ');}' +
     'catch(e){try{window.parent.postMessage(m,' + JSON.stringify(targetOrigin) + ');}catch(e2){}}' +
     '})();</script></body></html>';
 }
+
 
 function setupDatabase() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
