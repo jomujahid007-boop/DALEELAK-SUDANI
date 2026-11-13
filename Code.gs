@@ -105,8 +105,9 @@ function doPost(e) {
 
 
 function buildApiResponseHtml_(message) {
-  // Fixed GitHub Pages origin; never accept a target origin from the request.
-  var targetOrigin = 'https://jomujahid007-boop.github.io';
+  // The Apps Script web app may redirect the iframe response to a Google-hosted
+  // origin. Use '*' for delivery, while the frontend accepts messages only from
+  // the exact iframe created for the matching high-entropy requestId.
   var json = JSON.stringify(message)
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e')
@@ -116,8 +117,8 @@ function buildApiResponseHtml_(message) {
 
   return '<!doctype html><html><head><meta charset="utf-8"></head><body>' +
     '<script>(function(){var m=' + json + ';' +
-    'try{window.top.postMessage(m,' + JSON.stringify(targetOrigin) + ');}' +
-    'catch(e){try{window.parent.postMessage(m,' + JSON.stringify(targetOrigin) + ');}catch(e2){}}' +
+    'try{window.top.postMessage(m, "*");}' +
+    'catch(e){try{window.parent.postMessage(m, "*");}catch(e2){}}' +
     '})();</script></body></html>';
 }
 
