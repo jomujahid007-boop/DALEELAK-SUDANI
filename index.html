@@ -84,10 +84,28 @@ body[dir="ltr"] .add{inset-inline-start:auto;inset-inline-end:22px}
         <div class="field"><label data-i18n="descriptionLabel">وصف الخدمة</label><textarea name="description" maxlength="500" placeholder="اكتب نبذة مختصرة عن الخدمة..."></textarea></div>
         <div class="field"><label data-i18n="phoneLabel">رقم التواصل *</label><input name="phone" required inputmode="tel" placeholder="+9665xxxxxxxx"></div>
         <div class="field"><label data-i18n="whatsappLabel">رقم واتساب (اختياري)</label><input name="whatsapp" inputmode="tel" placeholder="اتركه فارغاً إذا نفس رقم التواصل"></div>
-        <div class="payment-box"><strong><span data-i18n="feeLabel">رسوم نشر الإعلان:</span> <span id="listingFee">20</span> <span data-i18n="sar">ريال</span></strong><div data-i18n="payTo">حوّل الرسوم عبر STC Pay إلى الرقم التالي:</div><strong id="stcPayNumber" class="payment-number">يتم تحميل رقم التحويل...</strong><div class="small" data-i18n="paymentHint">بعد التحويل، أدخل رقم العملية الموجود في إيصال التحويل. لن يُنشر الإعلان إلا بعد تأكد الإدارة من وصول المبلغ.</div></div>
-        <div class="field"><label data-i18n="referenceLabel">رقم عملية التحويل *</label><input name="paymentReference" required maxlength="80" placeholder="أدخل رقم العملية كما يظهر في الإيصال"></div>
-        <button class="submit" id="sendBtn" type="submit" data-i18n="sendListing">إرسال الإعلان ورقم العملية</button>
+        <div class="payment-box"><strong>رسوم نشر الإعلان: 20 ريال</strong><div>بعد تسجيل بيانات الإعلان ستنتقل إلى صفحة مستقلة لاختيار طريقة الدفع.</div></div>
+        <button class="submit" id="sendBtn" type="submit" data-i18n="sendListing">التالي: اختيار طريقة الدفع</button>
       </form>
+    </div>
+  </div>
+
+  <div class="modal" id="paymentModal" onclick="if(event.target===this)closePaymentPage()">
+    <div class="panel">
+      <button class="close" type="button" onclick="closePaymentPage()" data-i18n="close">إغلاق ✕</button>
+      <h2>دفع رسوم نشر الإعلان</h2>
+      <p class="small">رسوم النشر: <strong>20 ريال</strong>. اختر طريقة الدفع، ثم أدخل رقم العملية أو الرقم المرجعي.</p>
+      <div class="field"><label>طريقة الدفع</label>
+        <label class="payment-box" style="display:block;cursor:pointer"><input type="radio" name="paymentMethodChoice" value="BankTransfer" onchange="selectPaymentMethod(this.value)"> تحويل بنكي</label>
+        <label class="payment-box" style="display:block;cursor:pointer"><input type="radio" name="paymentMethodChoice" value="STCPay" onchange="selectPaymentMethod(this.value)"> STC Pay</label>
+        <label class="payment-box" style="display:block;opacity:.55"><input type="radio" disabled> Apple Pay — قريباً</label>
+      </div>
+      <div id="paymentInstructions" class="payment-box">اختر طريقة الدفع لعرض بيانات التحويل.</div>
+      <form id="paymentForm" onsubmit="submitPaymentForm(event)">
+        <div class="field"><label for="paymentReferenceInput">رقم العملية أو الرقم المرجعي *</label><input id="paymentReferenceInput" name="paymentReference" required maxlength="80" placeholder="أدخل الرقم كما يظهر في الإيصال"></div>
+        <button class="submit" id="paymentSendBtn" type="submit">إرسال إثبات الدفع</button>
+      </form>
+      <div id="paymentNotice" class="admin-note"></div>
     </div>
   </div>
 
@@ -110,12 +128,13 @@ const categoryEnglish={'صيانة المنازل':'Home Maintenance','السي�
 const citiesEnglish={'كل المدن':'All Cities','جدة':'Jeddah','الرياض':'Riyadh','مكة المكرمة':'Makkah','المدينة المنورة':'Madinah','الدمام':'Dammam','الخبر':'Al Khobar','الطائف':'Taif','أبها':'Abha','جيزان':'Jazan','تبوك':'Tabuk','حائل':'Hail','نجران':'Najran','الباحة':'Al Baha','عرعر':'Arar','سكاكا':'Sakaka','القريات':'Al Qurayyat','بريدة':'Buraidah','عنيزة':'Unaizah','الأحساء':'Al Ahsa','الجبيل':'Jubail','ينبع':'Yanbu','حفر الباطن':'Hafar Al Batin','خميس مشيط':'Khamis Mushait','جازان':'Jazan','الظهران':'Dhahran','القطيف':'Qatif','الخرج':'Al Kharj','المجمعة':'Al Majmaah','الزلفي':'Al Zulfi','الرس':'Ar Rass','الدوادمي':'Ad Dawadmi','رابغ':'Rabigh','القنفذة':'Al Qunfudhah','صبيا':'Sabya','أبو عريش':'Abu Arish','صامطة':'Samtah','محايل عسير':'Muhayil Asir','بيشة':'Bisha','شرورة':'Sharurah','رفحاء':'Rafha','ضباء':'Duba','الوجه':'Al Wajh','أملج':'Umluj','وادي الدواسر':'Wadi Al Dawasir','عفيف':'Afif','حوطة بني تميم':'Hawtat Bani Tamim','مدينة أخرى':'Other City'};
 const saudiCities=['جدة','الرياض','مكة المكرمة','المدينة المنورة','الدمام','الخبر','الظهران','القطيف','الطائف','أبها','خميس مشيط','جيزان','تبوك','حائل','نجران','الباحة','عرعر','سكاكا','القريات','بريدة','عنيزة','الأحساء','الجبيل','ينبع','حفر الباطن','الخرج','المجمعة','الزلفي','الرس','الدوادمي','رابغ','القنفذة','صبيا','أبو عريش','صامطة','محايل عسير','بيشة','شرورة','رفحاء','ضباء','الوجه','أملج','وادي الدواسر','عفيف','حوطة بني تميم','مدينة أخرى'];
 const words={
- ar:{brand:'دليلك السوداني',tagline:'خدمات أهلنا في مكان واحد',heroTitle:'دليلك السوداني',heroSubtitle:'جسرك بين السودان والسعودية · خدمات وفرص وتواصل',sections:'أقسام الخدمات',sectionsHint:'اختار الخدمة المناسبة',featuredSection:'خدمات مميزة ⭐',home:'الرئيسية',searchNav:'بحث',addServiceShort:'أضف إعلان',providersTitle:'مقدمو الخدمات',addService:'＋ أضف خدمتك',formTitle:'أضف خدمتك للدليل',formIntro:'املأ البيانات وسيصل طلبك للإدارة للمراجعة قبل النشر.',nameLabel:'اسمك أو اسم النشاط *',categoryLabel:'القسم *',cityLabel:'المدينة *',otherCityLabel:'اكتب اسم المدينة *',otherCityPlaceholder:'مثال: جازان أو مدينة أخرى',descriptionLabel:'وصف الخدمة',phoneLabel:'رقم التواصل *',whatsappLabel:'رقم واتساب (اختياري)',feeLabel:'رسوم نشر الإعلان:',sar:'ريال',payTo:'حوّل الرسوم عبر STC Pay إلى الرقم التالي:',paymentHint:'بعد التحويل، أدخل رقم العملية الموجود في إيصال التحويل. لن يُنشر الإعلان إلا بعد تأكد الإدارة من وصول المبلغ.',referenceLabel:'رقم عملية التحويل *',sendListing:'إرسال الإعلان ورقم العملية',adminLoginTitle:'دخول الإدارة',adminLoginHint:'هذه المنطقة مخصصة لإدارة الدليل فقط.',adminPassword:'كلمة مرور الإدارة',admin:'الإدارة',complaints:'تواصل معنا',day:'نهاري',night:'ليلي',search:'ابحث عن خدمة أو إعلان...',allCities:'كل المدن',serviceCount:'خدمة',noResults:'ما لقينا نتائج حالياً. كن أول زول يضيف خدمة في الدليل!',loading:'جاري تحميل الدليل...',statusPending:'بانتظار المراجعة',statusApproved:'معتمد',statusRejected:'مرفوض',paymentPending:'بانتظار التحقق من الدفع',paymentVerified:'تم التحقق من الدفع',oldExempt:'طلب قديم قبل تفعيل الرسوم — معفى من الدفع.',confirmPayment:'تأكيد الدفع ونشر الإعلان',reject:'رفض',feature:'تمييز ⭐',unfeature:'إلغاء التمييز',review:'إرجاع للمراجعة',refresh:'تحديث القائمة',logout:'تسجيل الخروج',back:'العودة للدليل',newRequests:'طلبات جديدة',approved:'معتمدة',rejected:'مرفوضة',noAdminRows:'لا توجد طلبات في هذا القسم حالياً.',adminTitle:'لوحة إدارة دليلك السوداني',adminSub:'راجع الطلبات وتحكم في ظهور الخدمات',login:'دخول',categoryWord:'القسم:',cityWord:'المدينة:',phoneWord:'الهاتف:',whatsappWord:'واتساب:',dateWord:'تاريخ الطلب:',noDescriptionText:'لا يوجد وصف.',close:'إغلاق ✕',contactWhatsApp:'واتساب',call:'اتصال',featured:'⭐ مميز',noDescription:'مقدم خدمة في ',oldRequest:'قبول ونشر (طلب قديم)',paymentStatus:'حالة الدفع:',amount:'المبلغ:',reference:'رقم العملية:',submittedAt:'تاريخ التحويل:'},
- en:{brand:'Your Sudanese Guide',tagline:'Our community services in one place',heroTitle:'Your Sudanese Guide',heroSubtitle:'Your bridge between Sudan and Saudi Arabia · Services, opportunities and connections',sections:'Service Categories',sectionsHint:'Choose the service you need',featuredSection:'Featured Services ⭐',home:'Home',searchNav:'Search',addServiceShort:'Add listing',providersTitle:'Service Providers',addService:'＋ Add Your Service',formTitle:'Add Your Service',formIntro:'Fill in the details. Your listing will be reviewed before publication.',nameLabel:'Your name or business name *',categoryLabel:'Category *',cityLabel:'City *',otherCityLabel:'Enter city name *',otherCityPlaceholder:'e.g. Jazan or another city',descriptionLabel:'Service description',phoneLabel:'Contact number *',whatsappLabel:'WhatsApp number (optional)',feeLabel:'Listing fee:',sar:'SAR',payTo:'Transfer the fee via STC Pay to:',paymentHint:'After transferring, enter the transaction reference from your receipt. Your listing will only be published after payment is verified.',referenceLabel:'Transfer reference number *',sendListing:'Submit listing and payment reference',adminLoginTitle:'Admin Login',adminLoginHint:'This area is for directory administrators only.',adminPassword:'Admin password',admin:'Admin',complaints:'Contact Us',day:'Light',night:'Dark',search:'Search for a service or listing...',allCities:'All Cities',serviceCount:'services',noResults:'No results found. Be the first to add a service!',loading:'Loading directory...',statusPending:'Pending review',statusApproved:'Approved',statusRejected:'Rejected',paymentPending:'Payment verification pending',paymentVerified:'Payment verified',oldExempt:'Legacy listing — exempt from the listing fee.',confirmPayment:'Verify payment & publish',reject:'Reject',feature:'Feature ⭐',unfeature:'Unfeature',review:'Return to review',refresh:'Refresh list',logout:'Log out',back:'Back to directory',newRequests:'New requests',approved:'Approved',rejected:'Rejected',noAdminRows:'No requests in this section.',adminTitle:'Your Sudanese Guide · Admin',adminSub:'Review requests and manage listings',login:'Login',categoryWord:'Category:',cityWord:'City:',phoneWord:'Phone:',whatsappWord:'WhatsApp:',dateWord:'Submitted:',noDescriptionText:'No description provided.',close:'Close ✕',contactWhatsApp:'WhatsApp',call:'Call',featured:'⭐ Featured',noDescription:'Service provider in ',oldRequest:'Approve & publish (legacy)',paymentStatus:'Payment status:',amount:'Amount:',reference:'Transaction reference:',submittedAt:'Submitted at:'}
+ ar:{brand:'دليلك السوداني',tagline:'خدمات أهلنا في مكان واحد',heroTitle:'دليلك السوداني',heroSubtitle:'جسرك بين السودان والسعودية · خدمات وفرص وتواصل',sections:'أقسام الخدمات',sectionsHint:'اختار الخدمة المناسبة',featuredSection:'خدمات مميزة ⭐',home:'الرئيسية',searchNav:'بحث',addServiceShort:'أضف إعلان',providersTitle:'مقدمو الخدمات',addService:'＋ أضف خدمتك',formTitle:'أضف خدمتك للدليل',formIntro:'املأ البيانات وسيصل طلبك للإدارة للمراجعة قبل النشر.',nameLabel:'اسمك أو اسم النشاط *',categoryLabel:'القسم *',cityLabel:'المدينة *',otherCityLabel:'اكتب اسم المدينة *',otherCityPlaceholder:'مثال: جازان أو مدينة أخرى',descriptionLabel:'وصف الخدمة',phoneLabel:'رقم التواصل *',whatsappLabel:'رقم واتساب (اختياري)',feeLabel:'رسوم نشر الإعلان:',sar:'ريال',payTo:'حوّل الرسوم عبر STC Pay إلى الرقم التالي:',paymentHint:'بعد التحويل، أدخل رقم العملية الموجود في إيصال التحويل. لن يُنشر الإعلان إلا بعد تأكد الإدارة من وصول المبلغ.',referenceLabel:'رقم عملية التحويل *',sendListing:'إرسال الإعلان ورقم العملية',adminLoginTitle:'دخول الإدارة',adminLoginHint:'هذه المنطقة مخصصة لإدارة الدليل فقط.',adminPassword:'كلمة مرور الإدارة',admin:'الإدارة',complaints:'تواصل معنا',day:'نهاري',night:'ليلي',search:'ابحث عن خدمة أو إعلان...',allCities:'كل المدن',serviceCount:'خدمة',noResults:'ما لقينا نتائج حالياً. كن أول زول يضيف خدمة في الدليل!',loading:'جاري تحميل الدليل...',statusPending:'بانتظار المراجعة',statusApproved:'معتمد',statusRejected:'مرفوض',paymentPending:'بانتظار التحقق من الدفع',paymentVerified:'تم التحقق من الدفع',oldExempt:'طلب قديم قبل تفعيل الرسوم — معفى من الدفع.',confirmPayment:'تأكيد الدفع ونشر الإعلان',reject:'رفض',feature:'تمييز ⭐',unfeature:'إلغاء التمييز',review:'إرجاع للمراجعة',refresh:'تحديث القائمة',logout:'تسجيل الخروج',back:'العودة للدليل',newRequests:'طلبات جديدة',approved:'معتمدة',rejected:'مرفوضة',noAdminRows:'لا توجد طلبات في هذا القسم حالياً.',adminTitle:'لوحة إدارة دليلك السوداني',adminSub:'راجع الطلبات وتحكم في ظهور الخدمات',login:'دخول',categoryWord:'القسم:',cityWord:'المدينة:',phoneWord:'الهاتف:',whatsappWord:'واتساب:',dateWord:'تاريخ الطلب:',noDescriptionText:'لا يوجد وصف.',close:'إغلاق ✕',contactWhatsApp:'واتساب',call:'اتصال',featured:'⭐ مميز',noDescription:'مقدم خدمة في ',oldRequest:'قبول ونشر (طلب قديم)',paymentStatus:'حالة الدفع:',amount:'المبلغ:',reference:'رقم العملية/المرجع:',paymentMethodLabel:'طريقة الدفع:',submittedAt:'تاريخ الدفع:'},
+ en:{brand:'Your Sudanese Guide',tagline:'Our community services in one place',heroTitle:'Your Sudanese Guide',heroSubtitle:'Your bridge between Sudan and Saudi Arabia · Services, opportunities and connections',sections:'Service Categories',sectionsHint:'Choose the service you need',featuredSection:'Featured Services ⭐',home:'Home',searchNav:'Search',addServiceShort:'Add listing',providersTitle:'Service Providers',addService:'＋ Add Your Service',formTitle:'Add Your Service',formIntro:'Fill in the details. Your listing will be reviewed before publication.',nameLabel:'Your name or business name *',categoryLabel:'Category *',cityLabel:'City *',otherCityLabel:'Enter city name *',otherCityPlaceholder:'e.g. Jazan or another city',descriptionLabel:'Service description',phoneLabel:'Contact number *',whatsappLabel:'WhatsApp number (optional)',feeLabel:'Listing fee:',sar:'SAR',payTo:'Transfer the fee via STC Pay to:',paymentHint:'After transferring, enter the transaction reference from your receipt. Your listing will only be published after payment is verified.',referenceLabel:'Transfer reference number *',sendListing:'Submit listing and payment reference',adminLoginTitle:'Admin Login',adminLoginHint:'This area is for directory administrators only.',adminPassword:'Admin password',admin:'Admin',complaints:'Contact Us',day:'Light',night:'Dark',search:'Search for a service or listing...',allCities:'All Cities',serviceCount:'services',noResults:'No results found. Be the first to add a service!',loading:'Loading directory...',statusPending:'Pending review',statusApproved:'Approved',statusRejected:'Rejected',paymentPending:'Payment verification pending',paymentVerified:'Payment verified',oldExempt:'Legacy listing — exempt from the listing fee.',confirmPayment:'Verify payment & publish',reject:'Reject',feature:'Feature ⭐',unfeature:'Unfeature',review:'Return to review',refresh:'Refresh list',logout:'Log out',back:'Back to directory',newRequests:'New requests',approved:'Approved',rejected:'Rejected',noAdminRows:'No requests in this section.',adminTitle:'Your Sudanese Guide · Admin',adminSub:'Review requests and manage listings',login:'Login',categoryWord:'Category:',cityWord:'City:',phoneWord:'Phone:',whatsappWord:'WhatsApp:',dateWord:'Submitted:',noDescriptionText:'No description provided.',close:'Close ✕',contactWhatsApp:'WhatsApp',call:'Call',featured:'⭐ Featured',noDescription:'Service provider in ',oldRequest:'Approve & publish (legacy)',paymentStatus:'Payment status:',amount:'Amount:',reference:'Transaction / reference number:',paymentMethodLabel:'Payment method:',submittedAt:'Payment submitted:'}
 };
 let language=localStorage.getItem('daleelakLanguage')||'ar';
 let theme=localStorage.getItem('daleelakTheme')||'light';
 let data={categories:[],providers:[],cities:[]}, activeCategory='';
+let currentListingId='', selectedPaymentMethod='';
 function tr(k){return (words[language]&&words[language][k])||words.ar[k]||k}
 function applyLanguage(){document.documentElement.lang=language;document.body.dir=language==='ar'?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.dataset.i18n;if(words[language][k])el.textContent=words[language][k]});document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{const k=el.dataset.i18nPlaceholder;if(words[language][k])el.placeholder=words[language][k]});document.getElementById('languageButton').textContent=language==='ar'?'🌐 English':'🌐 العربية';document.getElementById('themeButton').textContent=theme==='light'?'🌙 '+tr('night'):'☀️ '+tr('day');document.getElementById('adminLink').textContent=tr('admin');if(data.categories.length){drawCategories();drawFormCategories();localizeFormCities()}if(isLoaded)render();if(adminRows.length)renderAdminRows();}
 function toggleLanguage(){language=language==='ar'?'en':'ar';localStorage.setItem('daleelakLanguage',language);applyLanguage()}
@@ -181,7 +200,7 @@ function load(){
     if(!cities.includes('كل المدن'))city.insertAdjacentHTML('afterbegin','<option value="كل المدن">'+(language==='ar'?'كل المدن':'All cities')+'</option>');
     localizeFormCities();drawCategories();drawFormCategories();render();
     document.getElementById('listingFee').textContent=data.listingFee||20;
-    document.getElementById('stcPayNumber').textContent=data.stcPayNumber||(language==='ar'?'رقم الاستقبال غير متاح حالياً':'Payment number unavailable');
+    document.getElementById('listingFee').textContent=data.listingFee||20;
   }).catch(err=>{if(requestId===loadRequestId){clearTimeout(loadTimer);showLoadError(err);}});
 }
 function drawCategories(){
@@ -237,14 +256,41 @@ function submitForm(e){
   e.preventDefault();const form=e.target,btn=document.getElementById('sendBtn');
   const payload=Object.fromEntries(new FormData(form).entries());
   if(payload.city==='مدينة أخرى'){payload.city=String(payload.otherCity||'').trim();if(!payload.city){const input=document.getElementById('otherCity');input.focus();input.reportValidity();return;}}delete payload.otherCity;
-  btn.disabled=true;btn.textContent='جاري الإرسال...';
+  btn.disabled=true;btn.textContent='جاري حفظ الإعلان...';
   apiCall('submitProviderListing',payload).then(r=>{
-    const n=document.getElementById('notice');n.style.display='block';n.style.background='#e7f5eb';n.style.color='#185b35';n.textContent=r.message;
-    form.reset();toggleOtherCity();btn.disabled=false;btn.textContent='إرسال الإعلان ورقم العملية';
+    currentListingId=r.listingId;form.reset();toggleOtherCity();btn.disabled=false;btn.textContent='التالي: اختيار طريقة الدفع';
+    closeForm();openPaymentPage();
   }).catch(err=>{
     const n=document.getElementById('notice');n.style.display='block';n.style.background='#fff0ed';n.style.color='#9b2d1c';n.textContent=err.message||'حدث خطأ، حاول مرة أخرى.';
-    btn.disabled=false;btn.textContent='إرسال الإعلان ورقم العملية';
+    btn.disabled=false;btn.textContent='التالي: اختيار طريقة الدفع';
   });
+}
+function openPaymentPage(){
+  selectedPaymentMethod='';
+  document.querySelectorAll('input[name="paymentMethodChoice"]').forEach(x=>x.checked=false);
+  document.getElementById('paymentInstructions').textContent='اختر طريقة الدفع لعرض بيانات التحويل.';
+  document.getElementById('paymentReferenceInput').value='';
+  document.getElementById('paymentNotice').style.display='none';
+  document.getElementById('paymentModal').style.display='block';document.body.style.overflow='hidden';
+}
+function closePaymentPage(){document.getElementById('paymentModal').style.display='none';document.body.style.overflow=''}
+function selectPaymentMethod(method){
+  selectedPaymentMethod=method;const box=document.getElementById('paymentInstructions');
+  if(method==='BankTransfer'){
+    box.innerHTML='<strong>التحويل البنكي</strong><br>اسم صاحب الحساب: '+esc(data.bankAccountName||'غير محدد')+'<br>الآيبان:<strong class="payment-number">'+esc(data.bankIban||'بيانات الآيبان لم تُضف بعد')+'</strong>';
+  }else if(method==='STCPay'){
+    box.innerHTML='<strong>STC Pay</strong><br>حوّل رسوم الإعلان إلى الرقم التالي:<strong class="payment-number">'+esc(data.stcPayNumber||'رقم STC Pay غير متاح حالياً')+'</strong>';
+  }
+}
+function submitPaymentForm(e){
+  e.preventDefault();
+  if(!currentListingId){showAdminMessage('paymentNotice','انتهت جلسة تسجيل الإعلان. أعد تسجيل الإعلان من فضلك.',true);return;}
+  if(!selectedPaymentMethod){showAdminMessage('paymentNotice','اختر طريقة الدفع أولاً.',true);return;}
+  const btn=document.getElementById('paymentSendBtn');btn.disabled=true;btn.textContent='جاري إرسال بيانات الدفع...';
+  apiCall('submitPaymentReference',{listingId:currentListingId,paymentMethod:selectedPaymentMethod,paymentReference:document.getElementById('paymentReferenceInput').value}).then(r=>{
+    const n=document.getElementById('paymentNotice');n.style.display='block';n.style.background='#e7f5eb';n.style.color='#185b35';n.textContent=r.message;
+    currentListingId='';document.getElementById('paymentForm').reset();btn.disabled=false;btn.textContent='إرسال إثبات الدفع';
+  }).catch(err=>{showAdminMessage('paymentNotice',err.message||'تعذر إرسال إثبات الدفع.',true);btn.disabled=false;btn.textContent='إرسال إثبات الدفع';});
 }
 function openAdminLogin(){
   document.getElementById('loginNotice').style.display='none';
@@ -325,7 +371,7 @@ function renderAdminRows(){
       <h3>${esc(p.name)}</h3>
       <div class="meta">${tr('categoryWord')} ${esc(categoryLabel(p.category))}<br>${tr('cityWord')} ${esc(cityLabel(p.city))}<br>${tr('phoneWord')} ${esc(p.phone)}<br>${tr('whatsappWord')} ${esc(p.whatsapp||(language==='ar'?'غير محدد':'Not specified'))}<br>${tr('dateWord')} ${esc(p.createdAt||'—')}</div>
       <div class="desc">${esc(p.description||tr('noDescriptionText'))}</div>
-      ${p.paymentStatus?`<div class="meta" style="background:#f6f8f6;padding:9px;border-radius:9px">${tr('paymentStatus')} <strong>${esc(paymentLabel(p.paymentStatus))}</strong><br>${tr('amount')} ${esc(p.paymentAmount||20)} ${tr('sar')}<br>${tr('reference')} <strong>${esc(p.paymentReference||'—')}</strong><br>${tr('submittedAt')} ${esc(p.paymentSubmittedAt||'—')}</div>`:`<div class="meta" style="background:var(--soft);padding:9px;border-radius:9px">${tr('oldExempt')}</div>`}
+      ${p.paymentStatus?`<div class="meta" style="background:#f6f8f6;padding:9px;border-radius:9px">${tr('paymentStatus')} <strong>${esc(paymentLabel(p.paymentStatus))}</strong><br>${tr('amount')} ${esc(p.paymentAmount||20)} ${tr('sar')}<br>${tr('paymentMethodLabel')} <strong>${esc(p.paymentMethod==='BankTransfer'?'تحويل بنكي':p.paymentMethod==='STCPay'?'STC Pay':'—')}</strong><br>${tr('reference')} <strong>${esc(p.paymentReference||'—')}</strong><br>${tr('submittedAt')} ${esc(p.paymentSubmittedAt||'—')}</div>`:`<div class="meta" style="background:var(--soft);padding:9px;border-radius:9px">${tr('oldExempt')}</div>`}
       <div class="admin-actions">
         ${p.paymentStatus==='Submitted'?`<button class="approve" onclick="confirmPayment('${attr(p.id)}')">${tr('confirmPayment')}</button>`:''}
         ${!p.paymentStatus&&p.status.toLowerCase()!=='approved'?`<button class="approve" onclick="changeStatus('${attr(p.id)}','Approved')">${tr('oldRequest')}</button>`:''}
@@ -345,7 +391,7 @@ function changeStatus(id,status){
   }).catch(err=>showAdminMessage('adminNotice',err.message||'تعذر تحديث الطلب.',true));
 }
 function confirmPayment(id){
-  if(!confirm('تأكدت من وصول 20 ريال في حساب STC Pay وأن رقم العملية مطابق؟ بعد التأكيد سيُنشر الإعلان مباشرة.'))return;
+  if(!confirm('تأكدت من وصول 20 ريال في وسيلة الدفع المختارة وأن رقم العملية مطابق؟ بعد التأكيد سيُنشر الإعلان مباشرة.'))return;
   apiCall('adminConfirmPaymentAndApprove',{token:adminToken,id}).then(()=>{
     showAdminMessage('adminNotice',language==='ar'?'تم تأكيد الدفع ونشر الإعلان بنجاح.':'Payment verified and listing published.',false);loadAdmin();load();
   }).catch(err=>showAdminMessage('adminNotice',err.message||'تعذر تأكيد الدفع.',true));
