@@ -23,7 +23,7 @@ const APP = {
   },
   adminSessionSeconds: 21600,
   listingFee: 20,
-  paymentColumns: ['PaymentStatus', 'PaymentAmount', 'PaymentReference', 'PaymentSubmittedAt', 'PaymentVerifiedAt']
+  paymentColumns: ['PaymentStatus', 'PaymentAmount', 'PaymentMethod', 'PaymentReference', 'PaymentSubmittedAt', 'PaymentVerifiedAt']
 };
 
 function doGet() {
@@ -55,6 +55,7 @@ function doPost(e) {
     switch (action) {
       case 'getPublicData': result = getPublicData(); break;
       case 'submitProviderListing': result = submitProviderListing(payload); break;
+      case 'submitPaymentReference': result = submitPaymentReference(payload); break;
       case 'adminLogin': result = adminLogin(payload.password); break;
       case 'adminLogout': result = adminLogout(payload.token); break;
       case 'adminGetDashboard': result = adminGetDashboard(payload.token); break;
@@ -164,6 +165,8 @@ function getPublicData() {
     ok: true, version: APP.version, title: APP.title, categories: categories,
     providers: approved, totalProviders: approved.length, listingFee: APP.listingFee,
     stcPayNumber: PropertiesService.getScriptProperties().getProperty('STCPAY_NUMBER') || '',
+    bankIban: PropertiesService.getScriptProperties().getProperty('BANK_IBAN') || '',
+    bankAccountName: PropertiesService.getScriptProperties().getProperty('BANK_ACCOUNT_NAME') || '',
     cities: ['كل المدن', 'جدة', 'الرياض', 'مكة المكرمة', 'المدينة المنورة', 'الدمام', 'الخبر', 'الطائف', 'أبها', 'مدينة أخرى']
   };
 }
@@ -176,19 +179,8 @@ function submitProviderListing(form) {
   const description = clean_(form.description, 500);
   const phone = clean_(form.phone, 25);
   const whatsapp = cleanPhone_(form.whatsapp || phone);
-  const paymentReference = clean_(form.paymentReference, 80);
-
-  if (!name || !category || !city || !phone || !paymentReference) {
-    throw new Error('يرجى تعبئة البيانات المطلوبة وإدخال رقم عملية التحويل.');
-  }
-  if (!/^[+\d\s()-]{7,25}$/.test(phone)) {
-    throw new Error('رقم التواصل غير صحيح. أدخل الرقم مع رمز الدولة إن أمكن.');
-  }
-  if (!/^[\w\-\u0600-\u06FF ]{4,80}$/.test(paymentReference)) {
-    throw new Error('رقم العملية غير صحيح. راجع الرقم كما يظهر في إيصال التحويل.');
-  }
-  const paymentNumber = PropertiesService.getScriptProperties().getProperty('STCPAY_NUMBER');
-  if (!paymentNumber) throw new Error('بيانات استقبال STC Pay لم تُجهّز بعد. يرجى المحاولة لاحقاً.');
+  if (!name || !category || !city || !phone) throw new Error('يرجى تعبئة جميع البيانات المطلوبة للإعلان.');
+  if (!/^[+\d\s()-]{7,25}$/.test(phone)) throw new Error('رقم التواصل غير صحيح. أدخل الرقم مع رمز الدولة إن أمكن.');
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -196,26 +188,52 @@ function submitProviderListing(form) {
     const sh = getProvidersSheet_();
     ensureProviderPaymentColumns_(sh);
     const headers = getHeaders_(sh);
-    const refCol = headers.indexOf('PaymentReference') + 1;
-    if (refCol && sh.getLastRow() >= 2) {
-      const refs = sh.getRange(2, refCol, sh.getLastRow() - 1, 1).getDisplayValues().flat();
-      if (refs.some(x => String(x).trim() === paymentReference)) {
-        throw new Error('رقم العملية مستخدم من قبل. تأكد من رقم العملية الصحيح.');
-      }
-    }
-
+    const id = Utilities.getUuid();
     const record = {
-      ID: Utilities.getUuid(), CreatedAt: new Date(), Status: 'Pending',
+      ID: id, CreatedAt: new Date(), Status: 'Pending',
       Name: name, Category: category, City: city, Description: description,
       Phone: phone, WhatsApp: whatsapp, Featured: false,
-      PaymentStatus: 'Submitted', PaymentAmount: APP.listingFee,
-      PaymentReference: paymentReference, PaymentSubmittedAt: new Date(), PaymentVerifiedAt: ''
+      PaymentStatus: 'AwaitingPayment', PaymentAmount: APP.listingFee,
+      PaymentMethod: '', PaymentReference: '', PaymentSubmittedAt: '', PaymentVerifiedAt: ''
     };
     sh.appendRow(headers.map(h => Object.prototype.hasOwnProperty.call(record, h) ? record[h] : ''));
-    return { ok: true, message: 'وصل إعلانك ورقم العملية بنجاح. الإعلان الآن بانتظار تحقق الإدارة من وصول مبلغ 20 ريال.' };
-  } finally {
-    lock.releaseLock();
-  }
+    return { ok: true, listingId: id, message: 'تم تسجيل بيانات إعلانك. أكمل الدفع في الصفحة التالية لإرسال الطلب للمراجعة.' };
+  } finally { lock.releaseLock(); }
+}
+
+function submitPaymentReference(payload) {
+  payload = payload || {};
+  const id = clean_(payload.listingId, 100);
+  const method = String(payload.paymentMethod || '');
+  const reference = clean_(payload.paymentReference, 80);
+  if (!id || ['BankTransfer', 'STCPay'].indexOf(method) === -1 || !reference) throw new Error('اختر طريقة الدفع وأدخل رقم العملية أو الرقم المرجعي.');
+  if (!/^[\w\-\u0600-\u06FF ]{4,80}$/.test(reference)) throw new Error('رقم العملية غير صحيح. راجع الرقم كما يظهر في إيصال التحويل.');
+  const props = PropertiesService.getScriptProperties();
+  if (method === 'BankTransfer' && !props.getProperty('BANK_IBAN')) throw new Error('بيانات الحساب البنكي غير مكتملة حالياً.');
+  if (method === 'STCPay' && !props.getProperty('STCPAY_NUMBER')) throw new Error('بيانات استقبال STC Pay غير متاحة حالياً.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sh = getProvidersSheet_();
+    ensureProviderPaymentColumns_(sh);
+    const headers = getHeaders_(sh);
+    const idCol = headers.indexOf('ID') + 1;
+    const row = findProviderRow_(sh, idCol, id);
+    if (!row) throw new Error('لم يتم العثور على الإعلان. أعد تسجيل الإعلان من فضلك.');
+    const statusCol = headers.indexOf('Status') + 1;
+    const paymentStatusCol = headers.indexOf('PaymentStatus') + 1;
+    const existingStatus = String(sh.getRange(row, paymentStatusCol).getValue() || '');
+    if (String(sh.getRange(row, statusCol).getValue() || '') !== 'Pending' || existingStatus === 'Verified') throw new Error('لا يمكن تعديل بيانات الدفع لهذا الإعلان.');
+    const refCol = headers.indexOf('PaymentReference') + 1;
+    const refs = sh.getLastRow() >= 2 ? sh.getRange(2, refCol, sh.getLastRow() - 1, 1).getDisplayValues().flat() : [];
+    if (refs.some(x => String(x).trim() === reference)) throw new Error('رقم العملية مستخدم من قبل. تأكد من الرقم الصحيح.');
+    sh.getRange(row, headers.indexOf('PaymentMethod') + 1).setValue(method);
+    sh.getRange(row, refCol).setValue(reference);
+    sh.getRange(row, paymentStatusCol).setValue('Submitted');
+    sh.getRange(row, headers.indexOf('PaymentSubmittedAt') + 1).setValue(new Date());
+    return { ok: true, message: 'تم إرسال بيانات الدفع بنجاح. طلبك الآن بانتظار مراجعة الإدارة.' };
+  } finally { lock.releaseLock(); }
 }
 
 /* -------------------- ADMIN AUTHENTICATION -------------------- */
@@ -284,6 +302,7 @@ function adminGetDashboard(token) {
     featured: x.Featured === true || String(x.Featured).toLowerCase() === 'true',
     paymentStatus: String(x.PaymentStatus || ''),
     paymentAmount: Number(x.PaymentAmount || 0),
+    paymentMethod: String(x.PaymentMethod || ''),
     paymentReference: String(x.PaymentReference || ''),
     paymentSubmittedAt: x.PaymentSubmittedAt instanceof Date
       ? Utilities.formatDate(x.PaymentSubmittedAt, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm')
@@ -352,6 +371,9 @@ function adminConfirmPaymentAndApprove(token, id) {
     const refCol = headers.indexOf('PaymentReference') + 1;
     const reference = refCol ? String(sh.getRange(row, refCol).getValue() || '').trim() : '';
     if (!reference) throw new Error('لا يوجد رقم عملية مسجل لهذا الطلب.');
+    const methodCol = headers.indexOf('PaymentMethod') + 1;
+    const method = methodCol ? String(sh.getRange(row, methodCol).getValue() || '') : '';
+    if (method !== 'BankTransfer' && method !== 'STCPay') throw new Error('طريقة الدفع المسجلة غير صحيحة.');
 
     sh.getRange(row, paymentStatusCol).setValue('Verified');
     sh.getRange(row, verifiedAtCol).setValue(new Date());
