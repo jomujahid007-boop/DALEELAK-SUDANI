@@ -134,7 +134,7 @@ window.addEventListener('message',function(event){
   if(!m||m.type!=='daleelak-api-response'||!m.requestId)return;
   const pending=apiRequests.get(m.requestId);
   // The Apps Script response posts from window.top, so the sender is this page itself.
-  if(!pending||event.source!==window||event.origin!==window.location.origin)return;
+  if(!pending||event.source!==pending.iframe.contentWindow)return;
   clearTimeout(pending.timer);apiRequests.delete(m.requestId);
   pending.form.remove();pending.iframe.remove();
   if(m.ok)pending.resolve(m.data);
