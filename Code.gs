@@ -23,6 +23,9 @@ const APP = {
   },
   adminSessionSeconds: 21600,
   listingFee: 20,
+  listingRateHourly: 3,
+  listingRateDaily: 6,
+  adminPasswordIterations: 12000,
   paymentColumns: ['PaymentStatus', 'PaymentAmount', 'PaymentMethod', 'PaymentReference', 'PaymentSubmittedAt', 'PaymentVerifiedAt']
 };
 
@@ -183,18 +186,30 @@ function submitProviderListing(form) {
   const description = clean_(form.description, 500);
   const phone = clean_(form.phone, 25);
   const whatsapp = cleanPhone_(form.whatsapp || phone);
+  const phoneDigits = phone.replace(/\D/g, '');
+  const elapsedMs = Number(form.formElapsedMs || 0);
+  if (String(form.website || '').trim()) throw new Error('تعذر التحقق من الطلب. حدّث الصفحة وحاول مرة أخرى.');
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 2500 || elapsedMs > 7200000) throw new Error('يرجى مراجعة بيانات الإعلان ثم المحاولة مرة أخرى.');
   if (!name || !category || !city || !phone) throw new Error('يرجى تعبئة جميع البيانات المطلوبة للإعلان.');
-  if (!/^[+\d\s()-]{7,25}$/.test(phone)) throw new Error('رقم التواصل غير صحيح. أدخل الرقم مع رمز الدولة إن أمكن.');
+  if (!/^[+\d\s()-]{7,25}$/.test(phone) || phoneDigits.length < 7) throw new Error('رقم التواصل غير صحيح. أدخل الرقم مع رمز الدولة إن أمكن.');
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const sh = getProvidersSheet_();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const categorySheet = ss && ss.getSheetByName(APP.sheets.categories);
+    if (!categorySheet) throw new Error('أقسام الخدمات غير متاحة حالياً.');
+    const activeCategories = readObjects_(categorySheet)
+      .filter(x => x.Active === true || String(x.Active).toLowerCase() === 'true')
+      .map(x => String(x.Name || '').trim());
+    if (activeCategories.indexOf(category) === -1) throw new Error('القسم المختار غير متاح. حدّث الصفحة واختر قسماً من القائمة.');
+    enforceListingRateLimit_(phoneDigits);
     ensureProviderPaymentColumns_(sh);
     ensureProviderImageColumn_(sh);
     const headers = getHeaders_(sh);
     const id = Utilities.getUuid();
-    const imageIds = saveProviderImages_(form.images || [], id);
+    let imageIds = [];
     const record = {
       ID: id, CreatedAt: new Date(), Status: 'Pending',
       Name: name, Category: category, City: city, Description: description,
@@ -202,7 +217,15 @@ function submitProviderListing(form) {
       PaymentStatus: 'AwaitingPayment', PaymentAmount: APP.listingFee,
       PaymentMethod: '', PaymentReference: '', PaymentSubmittedAt: '', PaymentVerifiedAt: ''
     };
-    sh.appendRow(headers.map(h => Object.prototype.hasOwnProperty.call(record, h) ? record[h] : ''));
+    try {
+      imageIds = saveProviderImages_(form.images || [], id);
+      record.Images = JSON.stringify(imageIds);
+      sh.appendRow(headers.map(h => Object.prototype.hasOwnProperty.call(record, h) ? record[h] : ''));
+      recordListingSubmission_(phoneDigits);
+    } catch (err) {
+      trashProviderImages_(imageIds);
+      throw err;
+    }
     return { ok: true, listingId: id, message: 'تم تسجيل بيانات إعلانك. أكمل الدفع في الصفحة التالية لإرسال الطلب للمراجعة.' };
   } finally { lock.releaseLock(); }
 }
@@ -230,10 +253,11 @@ function submitPaymentReference(payload) {
     const statusCol = headers.indexOf('Status') + 1;
     const paymentStatusCol = headers.indexOf('PaymentStatus') + 1;
     const existingStatus = String(sh.getRange(row, paymentStatusCol).getValue() || '');
-    if (String(sh.getRange(row, statusCol).getValue() || '') !== 'Pending' || existingStatus === 'Verified') throw new Error('لا يمكن تعديل بيانات الدفع لهذا الإعلان.');
+    if (String(sh.getRange(row, statusCol).getValue() || '') !== 'Pending' || existingStatus !== 'AwaitingPayment') throw new Error('تم إرسال بيانات الدفع لهذا الإعلان مسبقاً أو لم يعد الطلب متاحاً.');
     const refCol = headers.indexOf('PaymentReference') + 1;
+    const normalizedReference = normalizePaymentReference_(reference);
     const refs = sh.getLastRow() >= 2 ? sh.getRange(2, refCol, sh.getLastRow() - 1, 1).getDisplayValues().flat() : [];
-    if (refs.some(x => String(x).trim() === reference)) throw new Error('رقم العملية مستخدم من قبل. تأكد من الرقم الصحيح.');
+    if (refs.some(x => normalizePaymentReference_(x) === normalizedReference)) throw new Error('رقم العملية مستخدم من قبل. تأكد من الرقم الصحيح.');
     sh.getRange(row, headers.indexOf('PaymentMethod') + 1).setValue(method);
     sh.getRange(row, refCol).setValue(reference);
     sh.getRange(row, paymentStatusCol).setValue('Submitted');
@@ -250,31 +274,46 @@ function submitPaymentReference(payload) {
  */
 function adminLogin(password) {
   const supplied = String(password || '');
-  if (!supplied) throw new Error('أدخل كلمة مرور الإدارة.');
+  if (!supplied || supplied.length > 256) throw new Error('أدخل كلمة مرور الإدارة الصحيحة.');
 
   const props = PropertiesService.getScriptProperties();
   let salt = props.getProperty('ADMIN_PASSWORD_SALT');
   let savedHash = props.getProperty('ADMIN_PASSWORD_HASH');
+  let hashVersion = props.getProperty('ADMIN_PASSWORD_HASH_VERSION') || 'LEGACY_SHA256';
 
   if (!savedHash) {
     const initialPassword = props.getProperty('ADMIN_PASSWORD');
     if (!initialPassword) {
       throw new Error('لم يتم إعداد كلمة مرور الإدارة. أضف ADMIN_PASSWORD في Script Properties.');
     }
-    if (initialPassword.length < 8) {
-      throw new Error('كلمة مرور الإدارة يجب أن تكون 8 أحرف على الأقل. حدّث ADMIN_PASSWORD من Script Properties.');
+    if (initialPassword.length < 12) {
+      throw new Error('لأمان أفضل، اجعل كلمة مرور الإدارة 12 حرفاً على الأقل ثم أعد المحاولة.');
     }
     salt = Utilities.getUuid() + Utilities.getUuid();
-    savedHash = passwordHash_(initialPassword, salt);
+    savedHash = pbkdf2Hash_(initialPassword, salt, APP.adminPasswordIterations);
     props.setProperties({
       ADMIN_PASSWORD_SALT: salt,
-      ADMIN_PASSWORD_HASH: savedHash
+      ADMIN_PASSWORD_HASH: savedHash,
+      ADMIN_PASSWORD_HASH_VERSION: 'PBKDF2_SHA256_12000'
     });
     props.deleteProperty('ADMIN_PASSWORD');
+    hashVersion = 'PBKDF2_SHA256_12000';
   }
 
-  if (!salt || passwordHash_(supplied, salt) !== savedHash) {
-    throw new Error('كلمة المرور غير صحيحة.');
+  if (!salt) throw new Error('إعداد كلمة مرور الإدارة غير مكتمل. راجع خصائص المشروع.');
+  const candidateHash = hashVersion === 'PBKDF2_SHA256_12000'
+    ? pbkdf2Hash_(supplied, salt, APP.adminPasswordIterations)
+    : passwordHash_(supplied, salt);
+  if (!constantTimeEqual_(candidateHash, savedHash)) throw new Error('كلمة المرور غير صحيحة.');
+
+  if (hashVersion !== 'PBKDF2_SHA256_12000') {
+    salt = Utilities.getUuid() + Utilities.getUuid();
+    savedHash = pbkdf2Hash_(supplied, salt, APP.adminPasswordIterations);
+    props.setProperties({
+      ADMIN_PASSWORD_SALT: salt,
+      ADMIN_PASSWORD_HASH: savedHash,
+      ADMIN_PASSWORD_HASH_VERSION: 'PBKDF2_SHA256_12000'
+    });
   }
 
   const token = Utilities.getUuid() + Utilities.getUuid();
@@ -340,8 +379,8 @@ function adminSetProviderStatus(token, id, status) {
     if (!row) throw new Error('لم يتم العثور على الطلب. حدّث القائمة وحاول مرة أخرى.');
     const paymentStatusCol = headers.indexOf('PaymentStatus') + 1;
     const paymentStatus = paymentStatusCol ? String(sh.getRange(row, paymentStatusCol).getValue() || '') : '';
-    if (status === 'Approved' && paymentStatus && paymentStatus !== 'Verified') {
-      throw new Error('لا يمكن نشر الإعلان قبل تأكيد الدفع من زر «تأكيد الدفع ونشر الإعلان».');
+    if (status === 'Approved' && paymentStatus !== 'Verified') {
+      throw new Error('لا يمكن نشر الإعلان قبل تأكيد الدفع الفعلي من زر «تأكيد الدفع ونشر الإعلان».');
     }
     sh.getRange(row, statusCol).setValue(status);
     return { ok: true, status: status };
@@ -371,15 +410,19 @@ function adminConfirmPaymentAndApprove(token, id) {
     const row = findProviderRow_(sh, idCol, id);
     if (!row) throw new Error('لم يتم العثور على الطلب.');
     const currentPaymentStatus = String(sh.getRange(row, paymentStatusCol).getValue() || '');
-    if (currentPaymentStatus !== 'Submitted' && currentPaymentStatus !== 'Verified') {
-      throw new Error('هذا الطلب لا يحتوي على عملية دفع جديدة بانتظار التحقق.');
+    const currentListingStatus = String(sh.getRange(row, statusCol).getValue() || '');
+    if (currentListingStatus !== 'Pending' || currentPaymentStatus !== 'Submitted') {
+      throw new Error('هذا الطلب ليس إعلاناً معلقاً يحتوي على إثبات دفع جديد.');
     }
+    const amountCol = headers.indexOf('PaymentAmount') + 1;
+    const amount = amountCol ? Number(sh.getRange(row, amountCol).getValue()) : 0;
+    if (amount !== APP.listingFee) throw new Error('قيمة رسوم الإعلان المسجلة غير مطابقة للرسوم المعتمدة.');
     const refCol = headers.indexOf('PaymentReference') + 1;
     const reference = refCol ? String(sh.getRange(row, refCol).getValue() || '').trim() : '';
     if (!reference) throw new Error('لا يوجد رقم عملية مسجل لهذا الطلب.');
     const methodCol = headers.indexOf('PaymentMethod') + 1;
     const method = methodCol ? String(sh.getRange(row, methodCol).getValue() || '') : '';
-    if (method && method !== 'BankTransfer' && method !== 'STCPay') throw new Error('طريقة الدفع المسجلة غير صحيحة.');
+    if (method !== 'BankTransfer' && method !== 'STCPay') throw new Error('طريقة الدفع المسجلة غير صحيحة.');
 
     sh.getRange(row, paymentStatusCol).setValue('Verified');
     sh.getRange(row, verifiedAtCol).setValue(new Date());
@@ -489,6 +532,60 @@ function passwordHash_(password, salt) {
   return Utilities.base64Encode(bytes);
 }
 
+function pbkdf2Hash_(password, salt, iterations) {
+  const rounds = Math.max(10000, Math.min(Number(iterations) || 12000, 200000));
+  const key = String(password);
+  let u = Utilities.computeHmacSha256Signature(String(salt) + '\\x00\\x00\\x00\\x01', key, Utilities.Charset.UTF_8);
+  const derived = u.slice();
+  for (let i = 1; i < rounds; i++) {
+    u = Utilities.computeHmacSha256Signature(u, key);
+    for (let j = 0; j < derived.length; j++) derived[j] = derived[j] ^ u[j];
+  }
+  return Utilities.base64Encode(derived);
+}
+
+function constantTimeEqual_(left, right) {
+  left = String(left || ''); right = String(right || '');
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let i = 0; i < left.length; i++) difference |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  return difference === 0;
+}
+
+function normalizePaymentReference_(value) {
+  return String(value || '').replace(/\\s+/g, '').toUpperCase();
+}
+
+function listingRateKeys_(phoneDigits) {
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(phoneDigits), Utilities.Charset.UTF_8);
+  const key = Utilities.base64EncodeWebSafe(digest).replace(/=+$/g, '');
+  return { hourly: 'listing_h_' + key, daily: 'listing_d_' + key };
+}
+
+function enforceListingRateLimit_(phoneDigits) {
+  const cache = CacheService.getScriptCache();
+  const keys = listingRateKeys_(phoneDigits);
+  const hourly = Number(cache.get(keys.hourly) || 0);
+  const daily = Number(cache.get(keys.daily) || 0);
+  if (hourly >= APP.listingRateHourly) throw new Error('تم الوصول للحد المؤقت لإضافة الإعلانات من هذا الرقم. حاول بعد ساعة.');
+  if (daily >= APP.listingRateDaily) throw new Error('تم الوصول للحد اليومي لإضافة الإعلانات من هذا الرقم. حاول غداً.');
+}
+
+function recordListingSubmission_(phoneDigits) {
+  const cache = CacheService.getScriptCache();
+  const keys = listingRateKeys_(phoneDigits);
+  const hourly = Number(cache.get(keys.hourly) || 0);
+  const daily = Number(cache.get(keys.daily) || 0);
+  cache.put(keys.hourly, String(hourly + 1), 3600);
+  cache.put(keys.daily, String(daily + 1), 86400);
+}
+
+function trashProviderImages_(ids) {
+  (ids || []).forEach(id => {
+    try { DriveApp.getFileById(String(id)).setTrashed(true); } catch (err) {}
+  });
+}
+
 /* -------------------- HELPERS -------------------- */
 
 function getProvidersSheet_() {
@@ -590,21 +687,35 @@ function saveProviderImages_(images, listingId) {
     folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     props.setProperty(key, folder.getId());
   }
-  const ids = [];
-  images.forEach((item, index) => {
+  const prepared = images.map((item, index) => {
     if (!item || typeof item.data !== 'string') throw new Error('إحدى الصور غير صالحة.');
-    const match = item.data.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+    const match = item.data.match(/^data:(image\\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
     if (!match) throw new Error('يسمح فقط بصور JPG أو PNG أو WEBP.');
     if (match[2].length > 430000) throw new Error('حجم إحدى الصور كبير. اختر صوراً أصغر.');
     const bytes = Utilities.base64Decode(match[2]);
     if (bytes.length > 320000) throw new Error('يجب ألا يتجاوز حجم الصورة الواحدة 320 كيلوبايت.');
-    const ext = match[1] === 'image/png' ? 'png' : (match[1] === 'image/webp' ? 'webp' : 'jpg');
-    const blob = Utilities.newBlob(bytes, match[1], listingId + '-' + (index + 1) + '.' + ext);
-    const file = folder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    ids.push(file.getId());
+    const b = bytes.map(x => x & 255);
+    const mime = match[1];
+    const validJpeg = mime === 'image/jpeg' && b[0] === 255 && b[1] === 216 && b[2] === 255;
+    const validPng = mime === 'image/png' && b.slice(0, 8).join(',') === '137,80,78,71,13,10,26,10';
+    const validWebp = mime === 'image/webp' && String.fromCharCode.apply(null, b.slice(0, 4)) === 'RIFF' && String.fromCharCode.apply(null, b.slice(8, 12)) === 'WEBP';
+    if (!validJpeg && !validPng && !validWebp) throw new Error('محتوى إحدى الصور لا يطابق نوع الملف المسموح.');
+    const ext = mime === 'image/png' ? 'png' : (mime === 'image/webp' ? 'webp' : 'jpg');
+    return { bytes: bytes, mime: mime, name: listingId + '-' + (index + 1) + '.' + ext };
   });
-  return ids;
+  const ids = [];
+  try {
+    prepared.forEach(item => {
+      const blob = Utilities.newBlob(item.bytes, item.mime, item.name);
+      const file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      ids.push(file.getId());
+    });
+    return ids;
+  } catch (err) {
+    trashProviderImages_(ids);
+    throw err;
+  }
 }
 
 function readObjects_(sh) {
