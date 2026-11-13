@@ -373,7 +373,7 @@ function adminConfirmPaymentAndApprove(token, id) {
     if (!reference) throw new Error('لا يوجد رقم عملية مسجل لهذا الطلب.');
     const methodCol = headers.indexOf('PaymentMethod') + 1;
     const method = methodCol ? String(sh.getRange(row, methodCol).getValue() || '') : '';
-    if (method !== 'BankTransfer' && method !== 'STCPay') throw new Error('طريقة الدفع المسجلة غير صحيحة.');
+    if (method && method !== 'BankTransfer' && method !== 'STCPay') throw new Error('طريقة الدفع المسجلة غير صحيحة.');
 
     sh.getRange(row, paymentStatusCol).setValue('Verified');
     sh.getRange(row, verifiedAtCol).setValue(new Date());
