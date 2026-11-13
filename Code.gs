@@ -62,6 +62,7 @@ function doPost(e) {
       case 'adminSetProviderStatus': result = adminSetProviderStatus(payload.token, payload.id, payload.status); break;
       case 'adminConfirmPaymentAndApprove': result = adminConfirmPaymentAndApprove(payload.token, payload.id); break;
       case 'adminSetProviderFeatured': result = adminSetProviderFeatured(payload.token, payload.id, payload.featured); break;
+      case 'adminDeleteProvider': result = adminDeleteProvider(payload.token, payload.id); break;
       default: throw new Error('العملية المطلوبة غير معروفة.');
     }
     ok = true;
@@ -402,6 +403,31 @@ function adminSetProviderFeatured(token, id, featured) {
     if (!row) throw new Error('لم يتم العثور على الخدمة. حدّث القائمة وحاول مرة أخرى.');
     sh.getRange(row, featuredCol).setValue(featured === true);
     return { ok: true, featured: featured === true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function adminDeleteProvider(token, id) {
+  requireAdmin_(token);
+  id = clean_(id, 100);
+  if (!id) throw new Error('معرّف الإعلان غير صحيح.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sh = getProvidersSheet_();
+    const headers = getHeaders_(sh);
+    const idCol = headers.indexOf('ID') + 1;
+    const statusCol = headers.indexOf('Status') + 1;
+    if (!idCol || !statusCol) throw new Error('أعمدة ورقة Providers غير مكتملة.');
+
+    const row = findProviderRow_(sh, idCol, id);
+    if (!row) throw new Error('الإعلان غير موجود أو تم حذفه مسبقاً.');
+
+    // Soft-delete keeps the row for audit/recovery but removes it from public/admin tabs.
+    sh.getRange(row, statusCol).setValue('Deleted');
+    return { ok: true, status: 'Deleted' };
   } finally {
     lock.releaseLock();
   }
