@@ -202,7 +202,7 @@ body[dir="ltr"] .add{inset-inline-start:auto;inset-inline-end:22px}
       <h2 data-i18n="formTitle">أضف خدمتك للدليل</h2>
       <p class="small" data-i18n="formIntro">املأ البيانات وسيصل طلبك للإدارة للمراجعة قبل النشر.</p>
       <div id="notice"></div>
-      <form id="listingForm" onsubmit="submitForm(event)">
+      <form id="listingForm" onsubmit="submitForm(event)">\n        <div aria-hidden="true" tabindex="-1" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden"><label>اترك هذا الحقل فارغاً<input type="text" name="website" value="" tabindex="-1" autocomplete="off"></label></div>
         <div class="field"><label data-i18n="nameLabel">اسمك أو اسم النشاط *</label><input name="name" required maxlength="80" placeholder="مثال: أحمد للصيانة"></div>
         <div class="field"><label data-i18n="categoryLabel">القسم *</label><select name="category" id="formCategory" required></select></div>
         <div class="field"><label data-i18n="cityLabel">المدينة *</label><select name="city" required onchange="toggleOtherCity()"><option value="">اختر المدينة</option><option>جدة</option><option>الرياض</option><option>مكة المكرمة</option><option>المدينة المنورة</option><option>الدمام</option><option>الخبر</option><option>الطائف</option><option>أبها</option><option>جيزان</option><option>تبوك</option><option>حائل</option><option>نجران</option><option>الباحة</option><option>عرعر</option><option>سكاكا</option><option>القريات</option><option>بريدة</option><option>عنيزة</option><option>الأحساء</option><option>الجبيل</option><option>ينبع</option><option>حفر الباطن</option><option>خميس مشيط</option><option>الظهران</option><option>القطيف</option><option>الخرج</option><option>المجمعة</option><option>الزلفي</option><option>الرس</option><option>الدوادمي</option><option>رابغ</option><option>القنفذة</option><option>صبيا</option><option>أبو عريش</option><option>صامطة</option><option>محايل عسير</option><option>بيشة</option><option>شرورة</option><option>رفحاء</option><option>ضباء</option><option>الوجه</option><option>أملج</option><option>وادي الدواسر</option><option>عفيف</option><option>حوطة بني تميم</option><option>مدينة أخرى</option></select></div>
@@ -279,6 +279,7 @@ let data={categories:[],providers:[],cities:[]}, activeCategory='';
 let listingView=localStorage.getItem('daleelakListingView')==='list'?'list':'grid';
 let currentListingId='', selectedPaymentMethod='';
 let selectedListingImages=[];
+let listingFormOpenedAt=0;
 function tr(k){return (words[language]&&words[language][k])||words.ar[k]||k}
 function applyListingView(){
   ['providers','featuredProviders'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.toggle('view-list',listingView==='list');});
@@ -305,8 +306,8 @@ window.addEventListener('message',function(event){
   const m=event.data;
   if(!m||m.type!=='daleelak-api-response'||!m.requestId)return;
   const pending=apiRequests.get(m.requestId);
-  // The Apps Script response posts from window.top, so the sender is this page itself.
-  if(!pending)return;
+  // Accept a response only from the iframe created for this exact request.
+  if(!pending||event.source!==pending.iframe.contentWindow)return;
   clearTimeout(pending.timer);apiRequests.delete(m.requestId);
   pending.form.remove();pending.iframe.remove();
   if(m.ok)pending.resolve(m.data);
@@ -447,8 +448,8 @@ document.addEventListener('keydown',function(e){
   else if(e.key==='ArrowRight')stepPhotoViewer(-1);
 });
 
-function openForm(){document.getElementById('modal').style.display='block';document.body.style.overflow='hidden'}
-function closeForm(){document.getElementById('modal').style.display='none';document.body.style.overflow=''}
+function openForm(){listingFormOpenedAt=Date.now();const trap=document.querySelector('#listingForm [name="website"]');if(trap)trap.value='';document.getElementById('modal').style.display='block';document.body.style.overflow='hidden'}
+function closeForm(){listingFormOpenedAt=0;document.getElementById('modal').style.display='none';document.body.style.overflow=''}
 async function handleListingImages(fileList){
   const files=Array.from(fileList||[]);
   const remaining=4-selectedListingImages.length;
@@ -495,6 +496,7 @@ function removeListingImage(index){selectedListingImages.splice(index,1);renderI
 function submitForm(e){
   e.preventDefault();const form=e.target,btn=document.getElementById('sendBtn');
   const payload=Object.fromEntries(new FormData(form).entries());
+  payload.formElapsedMs=listingFormOpenedAt?Date.now()-listingFormOpenedAt:0;
   payload.images=selectedListingImages.map(data=>({data}));
   if(payload.city==='مدينة أخرى'){payload.city=String(payload.otherCity||'').trim();if(!payload.city){const input=document.getElementById('otherCity');input.focus();input.reportValidity();return;}}delete payload.otherCity;
   btn.disabled=true;btn.textContent='جاري حفظ الإعلان...';
