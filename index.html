@@ -146,7 +146,7 @@ body[dir="ltr"] .add{inset-inline-start:auto;inset-inline-end:22px}
   <section class="admin-area" id="adminArea">
     <div class="admin-head">
       <div><h2 data-i18n="adminTitle">لوحة إدارة دليلك السوداني</h2><div class="small" data-i18n="adminSub">راجع الطلبات وتحكم في ظهور الخدمات</div></div>
-      <div class="actions"><button class="btn refresh" onclick="loadAdmin()" data-i18n="refresh">تحديث القائمة</button><button class="btn logout" onclick="logoutAdmin()" data-i18n="logout">تسجيل الخروج</button><button class="btn call" onclick="showPublic()" data-i18n="back">العودة للدليل</button></div>
+      <div class="actions"><button class="btn refresh" onclick="loadAdmin()" data-i18n="refresh">تحديث القائمة</button><button class="btn reject" onclick="clearTestListings()">تنظيف الإعلانات التجريبية</button><button class="btn logout" onclick="logoutAdmin()" data-i18n="logout">تسجيل الخروج</button><button class="btn call" onclick="showPublic()" data-i18n="back">العودة للدليل</button></div>
     </div>
     <div id="adminNotice" class="admin-note"></div>
     <div class="admin-tabs">
@@ -600,6 +600,22 @@ function confirmPayment(id){
   }).catch(err=>showAdminMessage('adminNotice',err.message||'تعذر تأكيد الدفع.',true));
 }
 function paymentStatusArabic(status){return ({AwaitingPayment:'بانتظار الدفع',Submitted:'بانتظار التحقق من الدفع',Verified:'تم التحقق من الدفع'})[status]||status}
+
+function clearTestListings(){
+  const warning=language==='ar'
+    ?'سيتم إخفاء جميع الإعلانات الحالية من الموقع، بما فيها الطلبات المعلقة والمرفوضة والمعتمدة. ستبقى السجلات محفوظة في Google Sheets ولن تُحذف الحسابات أو إعدادات الدفع. هل تريد المتابعة؟'
+    :'All current listings will be hidden from the site, including pending, rejected and approved listings. Records remain in Google Sheets; accounts and payment settings are untouched. Continue?';
+  if(!confirm(warning))return;
+  const phrase=language==='ar'?'مسح التجارب':'CLEAR TEST LISTINGS';
+  const entered=prompt(language==='ar'?'للتأكيد، اكتب: '+phrase:'To confirm, type: '+phrase);
+  if(entered!==phrase)return;
+  apiCall('adminClearListings',{token:adminToken}).then(result=>{
+    const count=Number(result&&result.deletedCount)||0;
+    showAdminMessage('adminNotice',language==='ar'?'تم إخفاء '+count+' إعلان من الموقع. قاعدة البيانات والحسابات محفوظة.':'Hidden '+count+' listings. Database records and accounts were preserved.',false);
+    loadAdmin();
+    load();
+  }).catch(err=>showAdminMessage('adminNotice',err.message||'تعذر تنظيف الإعلانات.',true));
+}
 
 function deleteProvider(id){
   if(!confirm(language==='ar'
