@@ -133,7 +133,8 @@ window.addEventListener('message',function(event){
   const m=event.data;
   if(!m||m.type!=='daleelak-api-response'||!m.requestId)return;
   const pending=apiRequests.get(m.requestId);
-  if(!pending||event.source!==pending.iframe.contentWindow)return;
+  // The Apps Script response posts from window.top, so the sender is this page itself.
+  if(!pending||event.source!==window||event.origin!==window.location.origin)return;
   clearTimeout(pending.timer);apiRequests.delete(m.requestId);
   pending.form.remove();pending.iframe.remove();
   if(m.ok)pending.resolve(m.data);
