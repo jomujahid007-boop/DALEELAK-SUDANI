@@ -513,6 +513,22 @@ function ensureProviderImageColumn_(sh) {
   }
 }
 
+function authorizeProviderImageStorage() {
+  const props = PropertiesService.getScriptProperties();
+  const key = 'PROVIDER_IMAGES_FOLDER_ID';
+  let folder = null;
+  const savedId = props.getProperty(key);
+  if (savedId) {
+    try { folder = DriveApp.getFolderById(savedId); } catch (err) {}
+  }
+  if (!folder) {
+    folder = DriveApp.createFolder('دليلك السوداني - صور الإعلانات');
+    props.setProperty(key, folder.getId());
+  }
+  folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return 'تم تجهيز مجلد صور إعلانات دليلك السوداني.';
+}
+
 function parseProviderImages_(value) {
   try {
     const ids = Array.isArray(value) ? value : JSON.parse(String(value || '[]'));
