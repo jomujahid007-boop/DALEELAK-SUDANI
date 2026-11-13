@@ -63,6 +63,7 @@ function doPost(e) {
       case 'adminConfirmPaymentAndApprove': result = adminConfirmPaymentAndApprove(payload.token, payload.id); break;
       case 'adminSetProviderFeatured': result = adminSetProviderFeatured(payload.token, payload.id, payload.featured); break;
       case 'adminDeleteProvider': result = adminDeleteProvider(payload.token, payload.id); break;
+      case 'adminClearListings': result = adminClearListings(payload.token); break;
       default: throw new Error('العملية المطلوبة غير معروفة.');
     }
     ok = true;
@@ -411,6 +412,40 @@ function adminSetProviderFeatured(token, id, featured) {
     lock.releaseLock();
   }
 }
+
+function adminClearListings(token) {
+  requireAdmin_(token);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sh = getProvidersSheet_();
+    const headers = getHeaders_(sh);
+    const idCol = headers.indexOf('ID') + 1;
+    const statusCol = headers.indexOf('Status') + 1;
+    if (!idCol || !statusCol) throw new Error('أعمدة ورقة Providers غير مكتملة.');
+    const lastRow = sh.getLastRow();
+    if (lastRow < 2) return { ok: true, deletedCount: 0 };
+
+    const rowCount = lastRow - 1;
+    const ids = sh.getRange(2, idCol, rowCount, 1).getValues();
+    const statuses = sh.getRange(2, statusCol, rowCount, 1).getValues();
+    let deletedCount = 0;
+    const updated = statuses.map((cell, index) => {
+      const id = String(ids[index][0] || '').trim();
+      const status = String(cell[0] || '');
+      if (id && status.toLowerCase() !== 'deleted') {
+        deletedCount++;
+        return ['Deleted'];
+      }
+      return [cell[0]];
+    });
+    if (deletedCount) sh.getRange(2, statusCol, rowCount, 1).setValues(updated);
+    return { ok: true, deletedCount: deletedCount };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 
 function adminDeleteProvider(token, id) {
   requireAdmin_(token);
