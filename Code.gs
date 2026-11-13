@@ -29,7 +29,28 @@ const APP = {
   paymentColumns: ['PaymentStatus', 'PaymentAmount', 'PaymentMethod', 'PaymentReference', 'PaymentSubmittedAt', 'PaymentVerifiedAt']
 };
 
-function doGet() {
+function doGet(e) {
+  // Public read-only JSONP bridge for GitHub Pages.
+  // Avoids hidden-iframe postMessage failures on some mobile browsers.
+  var params = e && e.parameter ? e.parameter : {};
+  var callback = String(params.callback || '');
+  if (params.action === 'getPublicData' && /^daleelakJsonp_[A-Za-z0-9_]{8,80}$/.test(callback)) {
+    var publicData;
+    try {
+      publicData = getPublicData();
+    } catch (err) {
+      publicData = { ok: false, error: err && err.message ? String(err.message) : 'تعذر تحميل بيانات الدليل.' };
+    }
+    var json = JSON.stringify(publicData)
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e')
+      .replace(/&/g, '\\u0026')
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029');
+    return ContentService.createTextOutput(callback + '(' + json + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle(APP.title)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
