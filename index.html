@@ -191,9 +191,27 @@ function drawFormCategories(){
   el.innerHTML='<option value="">'+(language==='ar'?'اختر القسم':'Choose a category')+'</option>'+(data.categories||[]).map(c=>`<option value="${attr(c)}">${esc(categoryLabel(c))}</option>`).join('');
 }
 function pickCategory(c){activeCategory=activeCategory===c?'':c;document.getElementById('listTitle').textContent=activeCategory?categoryLabel(activeCategory):tr('providersTitle');drawCategories();render();}
+function normalizeContactNumber(value){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  let digits=raw.replace(/\D/g,'');
+  if(!digits)return '';
+  if(digits.startsWith('00966'))digits=digits.slice(2);
+  if(digits.startsWith('966'))return '+'+digits;
+  if(digits.startsWith('05')&&digits.length===10)return '+966'+digits.slice(1);
+  if(digits.startsWith('5')&&digits.length===9)return '+966'+digits;
+  if(digits.startsWith('00'))return '+'+digits.slice(2);
+  if(raw.startsWith('+'))return '+'+digits;
+  return '+'+digits;
+}
+function displayContactNumber(value){
+  const normalized=normalizeContactNumber(value);
+  return normalized.startsWith('+9665')?'0'+normalized.slice(4):String(value||'');
+}
 function providerCard(p){
-  const wa=String(p.whatsapp||'').replace(/\D/g,'');const phone=String(p.phone||'').replace(/[^\d+]/g,'');
-  return `<article class="provider"><span class="pill">${esc(categoryLabel(p.category))}</span>${p.featured?`<span class="pill featured-label">${tr('featured')}</span>`:''}<h3>${esc(p.name)}</h3><div class="meta">📍 ${esc(cityLabel(p.city))} · ☎ ${esc(p.phone)}</div><div class="desc">${esc(p.description||(tr('noDescription')+cityLabel(p.city)))}</div><div class="actions">${wa?`<a class="btn wa" target="_blank" rel="noopener noreferrer" href="https://wa.me/${wa}">${tr('contactWhatsApp')}</a>`:''}${phone?`<a class="btn call" href="tel:${attr(phone)}">${tr('call')}</a>`:''}</div></article>`;
+  const wa=normalizeContactNumber(p.whatsapp||p.phone).replace(/\D/g,'');
+  const phone=normalizeContactNumber(p.phone);
+  return `<article class="provider"><span class="pill">${esc(categoryLabel(p.category))}</span>${p.featured?`<span class="pill featured-label">${tr('featured')}</span>`:''}<h3>${esc(p.name)}</h3><div class="meta">📍 ${esc(cityLabel(p.city))} · ☎ ${esc(displayContactNumber(p.phone))}</div><div class="desc">${esc(p.description||(tr('noDescription')+cityLabel(p.city)))}</div><div class="actions">${wa?`<a class="btn wa" target="_blank" rel="noopener noreferrer" href="https://wa.me/${wa}">${tr('contactWhatsApp')}</a>`:''}${phone?`<a class="btn call" href="tel:${attr(phone)}">${tr('call')}</a>`:''}</div></article>`;
 }
 function render(){
   if(!isLoaded)return;
