@@ -25,7 +25,7 @@ const APP = {
   listingFee: 20,
   listingRateHourly: 3,
   listingRateDaily: 6,
-  adminPasswordIterations: 12000,
+  adminPasswordIterations: 120000,
   paymentColumns: ['PaymentStatus', 'PaymentAmount', 'PaymentMethod', 'PaymentReference', 'PaymentSubmittedAt', 'PaymentVerifiedAt']
 };
 
@@ -294,25 +294,25 @@ function adminLogin(password) {
     props.setProperties({
       ADMIN_PASSWORD_SALT: salt,
       ADMIN_PASSWORD_HASH: savedHash,
-      ADMIN_PASSWORD_HASH_VERSION: 'PBKDF2_SHA256_12000'
+      ADMIN_PASSWORD_HASH_VERSION: 'PBKDF2_SHA256_120000'
     });
     props.deleteProperty('ADMIN_PASSWORD');
-    hashVersion = 'PBKDF2_SHA256_12000';
+    hashVersion = 'PBKDF2_SHA256_120000';
   }
 
   if (!salt) throw new Error('إعداد كلمة مرور الإدارة غير مكتمل. راجع خصائص المشروع.');
-  const candidateHash = hashVersion === 'PBKDF2_SHA256_12000'
+  const candidateHash = hashVersion === 'PBKDF2_SHA256_120000'
     ? pbkdf2Hash_(supplied, salt, APP.adminPasswordIterations)
     : passwordHash_(supplied, salt);
   if (!constantTimeEqual_(candidateHash, savedHash)) throw new Error('كلمة المرور غير صحيحة.');
 
-  if (hashVersion !== 'PBKDF2_SHA256_12000') {
+  if (hashVersion !== 'PBKDF2_SHA256_120000') {
     salt = Utilities.getUuid() + Utilities.getUuid();
     savedHash = pbkdf2Hash_(supplied, salt, APP.adminPasswordIterations);
     props.setProperties({
       ADMIN_PASSWORD_SALT: salt,
       ADMIN_PASSWORD_HASH: savedHash,
-      ADMIN_PASSWORD_HASH_VERSION: 'PBKDF2_SHA256_12000'
+      ADMIN_PASSWORD_HASH_VERSION: 'PBKDF2_SHA256_120000'
     });
   }
 
