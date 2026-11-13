@@ -46,7 +46,7 @@ function doPost(e) {
   try {
     var action = String((e && e.parameter && e.parameter.action) || '');
     var payloadText = String((e && e.parameter && e.parameter.payload) || '{}');
-    if (payloadText.length > 30000) throw new Error('حجم الطلب أكبر من المسموح.');
+    if (payloadText.length > 1800000) throw new Error('حجم الصور كبير. قلّل حجم الصور وحاول مرة أخرى.');
     var payload = JSON.parse(payloadText || '{}');
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
       throw new Error('صيغة الطلب غير صحيحة.');
@@ -139,6 +139,7 @@ function getPublicData() {
   const categoriesSheet = ss.getSheetByName(APP.sheets.categories);
   if (!providersSheet || !categoriesSheet) throw new Error('أوراق قاعدة البيانات غير مكتملة. تأكد من وجود Providers و Categories.');
 
+  ensureProviderImageColumn_(providersSheet);
   const providerHeaders = getHeaders_(providersSheet);
   const requiredProviderHeaders = ['ID', 'Status', 'Name', 'Category', 'City', 'Description', 'Phone', 'WhatsApp', 'Featured'];
   const missingHeaders = requiredProviderHeaders.filter(name => providerHeaders.indexOf(name) === -1);
@@ -158,6 +159,7 @@ function getPublicData() {
       city: String(x.City || ''), description: String(x.Description || ''), phone: String(x.Phone || ''),
       whatsapp: cleanPhone_(x.WhatsApp || x.Phone || ''),
       featured: x.Featured === true || String(x.Featured).toLowerCase() === 'true',
+      images: parseProviderImages_(x.Images),
       createdAt: x.CreatedAt instanceof Date ? x.CreatedAt.getTime() : 0
     }))
     .sort((a, b) => Number(b.featured) - Number(a.featured) || b.createdAt - a.createdAt);
@@ -188,12 +190,14 @@ function submitProviderListing(form) {
   try {
     const sh = getProvidersSheet_();
     ensureProviderPaymentColumns_(sh);
+    ensureProviderImageColumn_(sh);
     const headers = getHeaders_(sh);
     const id = Utilities.getUuid();
+    const imageIds = saveProviderImages_(form.images || [], id);
     const record = {
       ID: id, CreatedAt: new Date(), Status: 'Pending',
       Name: name, Category: category, City: city, Description: description,
-      Phone: phone, WhatsApp: whatsapp, Featured: false,
+      Phone: phone, WhatsApp: whatsapp, Featured: false, Images: JSON.stringify(imageIds),
       PaymentStatus: 'AwaitingPayment', PaymentAmount: APP.listingFee,
       PaymentMethod: '', PaymentReference: '', PaymentSubmittedAt: '', PaymentVerifiedAt: ''
     };
@@ -500,6 +504,56 @@ function ensureProviderPaymentColumns_(sh) {
       headers.push(name);
     }
   });
+}
+
+function ensureProviderImageColumn_(sh) {
+  const headers = getHeaders_(sh);
+  if (headers.indexOf('Images') === -1) {
+    sh.getRange(1, sh.getLastColumn() + 1).setValue('Images').setFontWeight('bold');
+  }
+}
+
+function parseProviderImages_(value) {
+  try {
+    const ids = Array.isArray(value) ? value : JSON.parse(String(value || '[]'));
+    if (!Array.isArray(ids)) return [];
+    return ids.slice(0, 4).map(id => String(id || '').trim())
+      .filter(id => /^[A-Za-z0-9_-]{10,}$/.test(id))
+      .map(id => 'https://drive.google.com/uc?export=view&id=' + encodeURIComponent(id));
+  } catch (err) { return []; }
+}
+
+function saveProviderImages_(images, listingId) {
+  if (!Array.isArray(images)) throw new Error('صيغة الصور غير صحيحة.');
+  if (images.length > 4) throw new Error('يمكن إضافة 4 صور كحد أقصى لكل إعلان.');
+  if (!images.length) return [];
+  const key = 'PROVIDER_IMAGES_FOLDER_ID';
+  const props = PropertiesService.getScriptProperties();
+  let folder = null;
+  const savedFolderId = props.getProperty(key);
+  if (savedFolderId) {
+    try { folder = DriveApp.getFolderById(savedFolderId); } catch (err) {}
+  }
+  if (!folder) {
+    folder = DriveApp.createFolder('دليلك السوداني - صور الإعلانات');
+    folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    props.setProperty(key, folder.getId());
+  }
+  const ids = [];
+  images.forEach((item, index) => {
+    if (!item || typeof item.data !== 'string') throw new Error('إحدى الصور غير صالحة.');
+    const match = item.data.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+    if (!match) throw new Error('يسمح فقط بصور JPG أو PNG أو WEBP.');
+    if (match[2].length > 430000) throw new Error('حجم إحدى الصور كبير. اختر صوراً أصغر.');
+    const bytes = Utilities.base64Decode(match[2]);
+    if (bytes.length > 320000) throw new Error('يجب ألا يتجاوز حجم الصورة الواحدة 320 كيلوبايت.');
+    const ext = match[1] === 'image/png' ? 'png' : (match[1] === 'image/webp' ? 'webp' : 'jpg');
+    const blob = Utilities.newBlob(bytes, match[1], listingId + '-' + (index + 1) + '.' + ext);
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    ids.push(file.getId());
+  });
+  return ids;
 }
 
 function readObjects_(sh) {
