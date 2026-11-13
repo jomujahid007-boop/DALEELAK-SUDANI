@@ -315,6 +315,32 @@ window.addEventListener('message',function(event){
   else pending.reject(new Error(m.error||'حدث خطأ في الخادم.'));
 });
 function apiCall(action,payload={}){
+  // Public directory reads use JSONP for reliable iOS/mobile delivery.
+  // Sensitive and write actions continue using the protected POST iframe bridge.
+  if(action==='getPublicData'){
+    return new Promise((resolve,reject)=>{
+      const callbackName='daleelakJsonp_'+Date.now().toString(36)+'_'+(++apiSequence).toString(36);
+      const script=document.createElement('script');
+      let settled=false;
+      let timer=null;
+      const finish=(error,data)=>{
+        if(settled)return;settled=true;
+        if(timer!==null)clearTimeout(timer);
+        script.remove();
+        try{delete window[callbackName];}catch(_){window[callbackName]=undefined;}
+        if(error)reject(error);else resolve(data);
+      };
+      window[callbackName]=(data)=>{
+        if(!data||data.ok===false){finish(new Error(data&&data.error?data.error:'تعذر تحميل بيانات الدليل.'));return;}
+        finish(null,data);
+      };
+      timer=setTimeout(()=>finish(new Error('انتهت مهلة تحميل بيانات الدليل من الخادم.')),30000);
+      script.onerror=()=>finish(new Error('تعذر استلام بيانات الدليل من Google Apps Script.'));
+      script.async=true;
+      script.src=API_URL+'?action=getPublicData&callback='+encodeURIComponent(callbackName)+'&_='+Date.now();
+      document.head.appendChild(script);
+    });
+  }
   return new Promise((resolve,reject)=>{
     const requestId='dl_'+(function(){const a=new Uint32Array(4);if(window.crypto&&window.crypto.getRandomValues)window.crypto.getRandomValues(a);else for(let i=0;i<a.length;i++)a[i]=Math.floor(Math.random()*4294967296);return Array.from(a,x=>x.toString(36)).join('');})();
     const iframe=document.createElement('iframe');
@@ -341,7 +367,7 @@ function showLoadError(e){clearTimeout(loadTimer);const msg=(e&&e.message)?e.mes
 function load(){
   const requestId=++loadRequestId;isLoaded=false;showLoading(language==='ar'?'جاري تحميل الدليل':'Loading directory');
   clearTimeout(loadTimer);
-  loadTimer=setTimeout(()=>{if(requestId===loadRequestId&&!isLoaded)showLoadError({message:language==='ar'?'استغرق الاتصال وقتاً أطول من المتوقع.':'The server took too long to respond.'});},26000);
+  loadTimer=setTimeout(()=>{if(requestId===loadRequestId&&!isLoaded)showLoadError({message:language==='ar'?'استغرق الاتصال وقتاً أطول من المتوقع.':'The server took too long to respond.'});},34000);
   apiCall('getPublicData').then(d=>{
     if(requestId!==loadRequestId)return;clearTimeout(loadTimer);
     if(!d||!Array.isArray(d.categories)||!Array.isArray(d.providers)){showLoadError({message:language==='ar'?'استجابة الخادم غير مكتملة.':'The server returned incomplete data.'});return;}
