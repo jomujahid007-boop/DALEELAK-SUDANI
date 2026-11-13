@@ -328,7 +328,7 @@ function apiCall(action,payload={}){
     const timer=setTimeout(()=>{
       apiRequests.delete(requestId);form.remove();iframe.remove();
       reject(new Error('انتهت مهلة الاتصال بالخادم. تأكد من نشر آخر إصدار من Apps Script ثم أعد المحاولة.'));
-    },25000);
+    },action==='adminLogin'?60000:25000);
     apiRequests.set(requestId,{resolve,reject,iframe,form,timer});
     document.body.appendChild(iframe);document.body.appendChild(form);
     try{form.submit();}catch(err){clearTimeout(timer);apiRequests.delete(requestId);form.remove();iframe.remove();reject(err);}
