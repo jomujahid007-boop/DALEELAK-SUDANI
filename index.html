@@ -134,7 +134,7 @@ window.addEventListener('message',function(event){
   if(!m||m.type!=='daleelak-api-response'||!m.requestId)return;
   const pending=apiRequests.get(m.requestId);
   // The Apps Script response posts from window.top, so the sender is this page itself.
-  if(!pending||event.source!==pending.iframe.contentWindow)return;
+  if(!pending)return;
   clearTimeout(pending.timer);apiRequests.delete(m.requestId);
   pending.form.remove();pending.iframe.remove();
   if(m.ok)pending.resolve(m.data);
@@ -142,7 +142,7 @@ window.addEventListener('message',function(event){
 });
 function apiCall(action,payload={}){
   return new Promise((resolve,reject)=>{
-    const requestId='dl_'+Date.now().toString(36)+'_'+(++apiSequence).toString(36);
+    const requestId='dl_'+(function(){const a=new Uint32Array(4);if(window.crypto&&window.crypto.getRandomValues)window.crypto.getRandomValues(a);else for(let i=0;i<a.length;i++)a[i]=Math.floor(Math.random()*4294967296);return Array.from(a,x=>x.toString(36)).join('');})();
     const iframe=document.createElement('iframe');
     iframe.name='daleelak_api_'+requestId;iframe.style.display='none';
     iframe.setAttribute('aria-hidden','true');
