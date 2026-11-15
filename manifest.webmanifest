@@ -1,0 +1,24 @@
+{
+  "id": "./",
+  "name": "دليلك السوداني",
+  "short_name": "دليلك",
+  "description": "دليلك السوداني — خدمات ومقدمو خدمات بين السودان والسعودية",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f6f8f5",
+  "theme_color": "#07583d",
+  "categories": ["business", "shopping", "lifestyle"],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
