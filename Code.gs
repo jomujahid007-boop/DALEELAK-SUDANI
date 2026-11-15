@@ -25,7 +25,7 @@ const APP = {
   listingFee: 20,
   listingRateHourly: 3,
   listingRateDaily: 6,
-  adminPasswordIterations: 30000,
+  adminPasswordIterations: 12000,
   paymentColumns: ['PaymentStatus', 'PaymentAmount', 'PaymentMethod', 'PaymentReference', 'PaymentSubmittedAt', 'PaymentVerifiedAt']
 };
 
@@ -194,22 +194,36 @@ function setupDatabase() {
 
 function storeApiResult_(requestId, message) {
   var props = PropertiesService.getScriptProperties(), prefix = 'DALEELAK_API_RESULT_', suffix = '_META';
-  var all = props.getProperties();
-  Object.keys(all).forEach(function(key) {
-    if (key.indexOf(prefix) !== 0 || key.slice(-suffix.length) !== suffix) return;
-    try {
-      var meta = JSON.parse(all[key]);
-      if (!meta || Number(meta.expiresAt) <= Date.now()) {
-        var base = key.slice(0, -suffix.length);
-        for (var n = 0; n < Number(meta && meta.chunks || 0); n++) props.deleteProperty(base + '_CHUNK_' + n);
-        props.deleteProperty(key);
-      }
-    } catch (ignored) { props.deleteProperty(key); }
-  });
-  var json = JSON.stringify({ expiresAt: Date.now() + 120000, message: message });
+  var now = Date.now();
+
+  // Avoid scanning the entire Script Properties store on every API request.
+  // Run a bounded-frequency cleanup sweep; unread results still expire after
+  // two minutes and are removed immediately when their request is polled.
+  var cleanupKey = 'DALEELAK_API_RESULT_LAST_CLEANUP';
+  var lastCleanup = Number(props.getProperty(cleanupKey) || 0);
+  if (now - lastCleanup > 6 * 60 * 60 * 1000) {
+    // Mark first so simultaneous requests do not all perform the same sweep.
+    props.setProperty(cleanupKey, String(now));
+    var all = props.getProperties();
+    Object.keys(all).forEach(function(key) {
+      if (key.indexOf(prefix) !== 0 || key.slice(-suffix.length) !== suffix) return;
+      try {
+        var meta = JSON.parse(all[key]);
+        if (!meta || Number(meta.expiresAt) <= now) {
+          var base = key.slice(0, -suffix.length);
+          for (var n = 0; n < Math.min(20, Number(meta && meta.chunks || 0)); n++) {
+            props.deleteProperty(base + '_CHUNK_' + n);
+          }
+          props.deleteProperty(key);
+        }
+      } catch (ignored) { props.deleteProperty(key); }
+    });
+  }
+
+  var json = JSON.stringify({ expiresAt: now + 120000, message: message });
   var chunkSize = 7000, count = Math.ceil(json.length / chunkSize), baseKey = prefix + requestId;
   for (var i = 0; i < count; i++) props.setProperty(baseKey + '_CHUNK_' + i, json.slice(i * chunkSize, (i + 1) * chunkSize));
-  props.setProperty(baseKey + suffix, JSON.stringify({ expiresAt: Date.now() + 120000, chunks: count }));
+  props.setProperty(baseKey + suffix, JSON.stringify({ expiresAt: now + 120000, chunks: count }));
 }
 
 function takeApiResult_(requestId) {
