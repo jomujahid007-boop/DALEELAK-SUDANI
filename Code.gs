@@ -120,6 +120,8 @@ function doPost(e) {
       case 'adminSetProviderFeatured': result = adminSetProviderFeatured(payload.token, payload.id, payload.featured); break;
       case 'adminDeleteProvider': result = adminDeleteProvider(payload.token, payload.id); break;
       case 'adminClearListings': result = adminClearListings(payload.token); break;
+      case 'adminDeleteProvider': result = adminDeleteProvider(payload.token, payload.id); break;
+      case 'adminClearListings': result = adminClearListings(payload.token); break;
       default: throw new Error('العملية المطلوبة غير معروفة.');
     }
     ok = true;
