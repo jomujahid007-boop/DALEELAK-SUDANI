@@ -158,26 +158,22 @@ function buildApiResponseHtml_(message) {
 function setupDatabase() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('افتح Google Sheet المرتبط بهذا المشروع أولاً.');
-
-  const providers = ensureSheet_(ss, APP.sheets.providers, [
-    'ID', 'CreatedAt', 'Status', 'Name', 'Category', 'City',
-    'Description', 'Phone', 'WhatsApp', 'Featured'
-  ]);
+  const providers = ensureSheet_(ss, APP.sheets.providers, ['ID', 'CreatedAt', 'Status', 'Name', 'Category', 'City', 'Description', 'Phone', 'WhatsApp', 'Featured']);
   ensureProviderPaymentColumns_(providers);
   ensureSheet_(ss, APP.sheets.categories, ['Name', 'Active']);
   ensureSheet_(ss, APP.sheets.settings, ['Key', 'Value']);
-
   const cats = ss.getSheetByName(APP.sheets.categories);
   const defaultCategories = APP.defaultCategories.map(name => [name, true]);
-  const existingCategoryNames = cats.getLastRow() >= 2
-    ? cats.getRange(2, 1, cats.getLastRow() - 1, 1).getDisplayValues().flat().map(x => String(x).trim())
-    : [];
-  const missingCategories = defaultCategories.filter(row => exi
+  const existingCategoryNames = cats.getLastRow() >= 2 ? cats.getRange(2, 1, cats.getLastRow() - 1, 1).getDisplayValues().flat().map(x => String(x).trim()) : [];
+  const missingCategories = defaultCategories.filter(row => existingCategoryNames.indexOf(row[0]) === -1);
+  if (missingCategories.length) cats.getRange(cats.getLastRow() + 1, 1, missingCategories.length, 2).setValues(missingCategories);
+  const settings = ss.getSheetByName(APP.sheets.settings);
+  if (settings.getLastRow() < 2) settings.getRange(2, 1, 2, 2).setValues([['AppName', APP.title], ['Version', 'MVP-2']]);
+  return 'تم تجهيز قاعدة بيانات دليلك السوداني.';
+}
 
 function storeApiResult_(requestId, message) {
-  var props = PropertiesService.getScriptProperties();
-  var prefix = 'DALEELAK_API_RESULT_';
-  var suffix = '_META';
+  var props = PropertiesService.getScriptProperties(), prefix = 'DALEELAK_API_RESULT_', suffix = '_META';
   var all = props.getProperties();
   Object.keys(all).forEach(function(key) {
     if (key.indexOf(prefix) !== 0 || key.slice(-suffix.length) !== suffix) return;
@@ -191,23 +187,19 @@ function storeApiResult_(requestId, message) {
     } catch (ignored) { props.deleteProperty(key); }
   });
   var json = JSON.stringify({ expiresAt: Date.now() + 120000, message: message });
-  var chunkSize = 7000;
-  var count = Math.ceil(json.length / chunkSize);
-  var baseKey = prefix + requestId;
+  var chunkSize = 7000, count = Math.ceil(json.length / chunkSize), baseKey = prefix + requestId;
   for (var i = 0; i < count; i++) props.setProperty(baseKey + '_CHUNK_' + i, json.slice(i * chunkSize, (i + 1) * chunkSize));
   props.setProperty(baseKey + suffix, JSON.stringify({ expiresAt: Date.now() + 120000, chunks: count }));
 }
 
 function takeApiResult_(requestId) {
-  var props = PropertiesService.getScriptProperties();
-  var baseKey = 'DALEELAK_API_RESULT_' + requestId;
+  var props = PropertiesService.getScriptProperties(), baseKey = 'DALEELAK_API_RESULT_' + requestId;
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) return null;
   try {
     var metaText = props.getProperty(baseKey + '_META');
     if (metaText) {
-      var meta = JSON.parse(metaText);
-      var chunks = [];
+      var meta = JSON.parse(metaText), chunks = [];
       for (var i = 0; i < Number(meta.chunks || 0); i++) chunks.push(props.getProperty(baseKey + '_CHUNK_' + i) || '');
       props.deleteProperty(baseKey + '_META');
       for (var j = 0; j < chunks.length; j++) props.deleteProperty(baseKey + '_CHUNK_' + j);
@@ -220,25 +212,8 @@ function takeApiResult_(requestId) {
     props.deleteProperty(baseKey);
     var legacy = JSON.parse(legacyText);
     return legacy && Number(legacy.expiresAt) > Date.now() ? legacy.message : null;
-  } catch (err) {
-    return null;
-  } finally {
-    lock.releaseLock();
-  }
-}stingCategoryNames.indexOf(row[0]) === -1);
-  if (missingCategories.length) {
-    cats.getRange(cats.getLastRow() + 1, 1, missingCategories.length, 2).setValues(missingCategories);
-  }
-
-  const settings = ss.getSheetByName(APP.sheets.settings);
-  if (settings.getLastRow() < 2) {
-    settings.getRange(2, 1, 2, 2).setValues([
-      ['AppName', APP.title],
-      ['Version', 'MVP-2']
-    ]);
-  }
-
-  return 'تم تجهيز قاعدة بيانات دليلك السوداني.';
+  } catch (err) { return null; }
+  finally { lock.releaseLock(); }
 }
 
 /* -------------------- PUBLIC API -------------------- */
