@@ -25,7 +25,7 @@ const APP = {
   listingFee: 20,
   listingRateHourly: 3,
   listingRateDaily: 6,
-  adminPasswordIterations: 120000,
+  adminPasswordIterations: 30000,
   paymentColumns: ['PaymentStatus', 'PaymentAmount', 'PaymentMethod', 'PaymentReference', 'PaymentSubmittedAt', 'PaymentVerifiedAt']
 };
 
@@ -133,7 +133,15 @@ function doPost(e) {
   if (ok) message.data = result;
   else message.error = error;
 
-  // Deliver every POST response through the same one-time JSONP bridge.
+  // Admin login returns directly to its exact requesting iframe. The password
+  // remains in the POST body; this avoids repeated JSONP polling for login.
+  if (action === 'adminLogin') {
+    return HtmlService.createHtmlOutput(buildApiResponseHtml_(message))
+      .setTitle('Daleelak API')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  // Other POST responses use the one-time JSONP bridge.
   // Credentials and session tokens remain in the POST body, never in the URL.
   if (/^[A-Za-z0-9_-]{8,100}$/.test(requestId)) {
     storeApiResult_(requestId, message);
@@ -401,43 +409,42 @@ function adminLogin(password) {
     }
     salt = Utilities.getUuid() + Utilities.getUuid();
     savedHash = pbkdf2Hash_(initialPassword, salt, APP.adminPasswordIterations);
+    hashVersion = 'PBKDF2_SHA256_' + APP.adminPasswordIterations;
     props.setProperties({
       ADMIN_PASSWORD_SALT: salt,
       ADMIN_PASSWORD_HASH: savedHash,
-      ADMIN_PASSWORD_HASH_VERSION: 'PBKDF2_SHA256_120000'
+      ADMIN_PASSWORD_HASH_VERSION: hashVersion
     });
     props.deleteProperty('ADMIN_PASSWORD');
-    hashVersion = 'PBKDF2_SHA256_120000';
   }
 
   if (!salt) throw new Error('إعداد كلمة مرور الإدارة غير مكتمل. راجع خصائص المشروع.');
-  const candidateHash = hashVersion === 'PBKDF2_SHA256_120000'
-    ? pbkdf2Hash_(supplied, salt, APP.adminPasswordIterations)
+
+  // Preserve compatibility with existing hashes: verify them using the exact
+  // iteration count recorded in their version, then upgrade after success.
+  const versionMatch = /^PBKDF2_SHA256_(\\d+)$/.exec(hashVersion);
+  const storedIterations = versionMatch ? Number(versionMatch[1]) : 0;
+  const candidateHash = storedIterations
+    ? pbkdf2Hash_(supplied, salt, storedIterations)
     : passwordHash_(supplied, salt);
   if (!constantTimeEqual_(candidateHash, savedHash)) throw new Error('كلمة المرور غير صحيحة.');
 
-  if (hashVersion !== 'PBKDF2_SHA256_120000') {
+  if (storedIterations !== APP.adminPasswordIterations || !versionMatch) {
     salt = Utilities.getUuid() + Utilities.getUuid();
     savedHash = pbkdf2Hash_(supplied, salt, APP.adminPasswordIterations);
+    hashVersion = 'PBKDF2_SHA256_' + APP.adminPasswordIterations;
     props.setProperties({
       ADMIN_PASSWORD_SALT: salt,
       ADMIN_PASSWORD_HASH: savedHash,
-      ADMIN_PASSWORD_HASH_VERSION: 'PBKDF2_SHA256_120000'
+      ADMIN_PASSWORD_HASH_VERSION: hashVersion
     });
   }
 
-  // Admin sessions use Script Properties rather than CacheService so an
-  // otherwise valid login is not randomly invalidated by cache eviction.
-  const sessionProperties = PropertiesService.getScriptProperties();
-  const sessionPrefix = 'DALEELAK_ADMIN_SESSION_';
-  const allProperties = sessionProperties.getProperties();
-  Object.keys(allProperties).forEach(function(key) {
-    if (key.indexOf(sessionPrefix) !== 0) return;
-    if (Number(allProperties[key]) <= Date.now()) sessionProperties.deleteProperty(key);
-  });
+  // Expired sessions are rejected by requireAdmin_; avoid scanning every
+  // Script Property on each login.
   const token = Utilities.getUuid() + Utilities.getUuid();
-  sessionProperties.setProperty(
-    sessionPrefix + token,
+  PropertiesService.getScriptProperties().setProperty(
+    'DALEELAK_ADMIN_SESSION_' + token,
     String(Date.now() + APP.adminSessionSeconds * 1000)
   );
   return { ok: true, token: token, expiresIn: APP.adminSessionSeconds };
