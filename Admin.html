@@ -81,7 +81,7 @@ let token='',rows=[],tab='Pending',busy=false;
 const $=id=>document.getElementById(id);
 function call(name,...args){
   return new Promise((resolve,reject)=>{
-    if(!google||!google.script||!google.script.run){reject(new Error('هذه الصفحة ليست مفتوحة من رابط Apps Script المنشور.'));return;}
+    if(typeof google==='undefined'||!google.script||!google.script.run){reject(new Error('هذه الصفحة ليست مفتوحة من رابط Apps Script المنشور.'));return;}
     const runner=google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(new Error(e&&e.message?e.message:'تعذر تنفيذ العملية على الخادم.')));
     runner[name](...args);
   });
