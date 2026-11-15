@@ -458,7 +458,9 @@ function adminGetDashboard(token) {
   const sh = ss && ss.getSheetByName(APP.sheets.providers);
   if (!sh) throw new Error('ورقة Providers غير موجودة. شغّل setupDatabase أولاً.');
 
-  return readObjects_(sh).map(x => ({
+  return readObjects_(sh)
+    .filter(x => String(x.Status || '').toLowerCase() !== 'deleted')
+    .map(x => ({
     id: String(x.ID || ''),
     createdAt: x.CreatedAt instanceof Date
       ? Utilities.formatDate(x.CreatedAt, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm')
