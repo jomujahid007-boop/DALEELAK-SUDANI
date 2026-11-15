@@ -42,9 +42,36 @@ function doGet(e) {
   if (params.action === 'getApiResult' &&
       /^daleelakJsonp_[A-Za-z0-9_]{8,80}$/.test(callback) &&
       /^[A-Za-z0-9_-]{8,100}$/.test(resultRequestId)) {
-    var cachedResult = CacheService.getScriptCache().get('daleelak_api_result_' + resultRequestId);
-    if (cachedResult) CacheService.getScriptCache().remove('daleelak_api_result_' + resultRequestId);
-    return ContentService.createTextOutput(callback + '(' + (cachedResult || 'null') + ');')
+    var resultKey = 'DALEELAK_API_RESULT_' + resultRequestId;
+    var storedResult = null;
+    var resultLock = LockService.getScriptLock();
+    if (resultLock.tryLock(5000)) {
+      try {
+        var resultProperties = PropertiesService.getScriptProperties();
+        var storedText = resultProperties.getProperty(resultKey);
+        if (storedText) {
+          resultProperties.deleteProperty(resultKey);
+          try {
+            var storedEnvelope = JSON.parse(storedText);
+            if (storedEnvelope && Number(storedEnvelope.expiresAt) > Date.now() &&
+                storedEnvelope.message && storedEnvelope.message.type === 'daleelak-api-response' &&
+                storedEnvelope.message.requestId === resultRequestId) {
+              storedResult = JSON.stringify(storedEnvelope.message)
+                .replace(/</g, '\\u003c')
+                .replace(/>/g, '\\u003e')
+                .replace(/&/g, '\\u0026')
+                .replace(/\\u2028/g, '\\u2028')
+                .replace(/\\u2029/g, '\\u2029');
+            }
+          } catch (ignored) {
+            storedResult = null;
+          }
+        }
+      } finally {
+        resultLock.releaseLock();
+      }
+    }
+    return ContentService.createTextOutput(callback + '(' + (storedResult || 'null') + ');')
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
   if (params.action === 'getPublicData' && /^daleelakJsonp_[A-Za-z0-9_]{8,80}$/.test(callback)) {
@@ -116,11 +143,26 @@ function doPost(e) {
   // This avoids losing the response across Google's cross-origin redirects.
   // The password is never placed in the URL; only the random request ID is.
   if (action === 'adminLogin' && /^[A-Za-z0-9_-]{8,100}$/.test(requestId)) {
-    CacheService.getScriptCache().put(
-      'daleelak_api_result_' + requestId,
-      JSON.stringify(message).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')
-        .replace(/&/g, '\\u0026').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029'),
-      120
+    // CacheService is not reliable for a required hand-off: Google may evict
+    // entries before their requested TTL. Store this short-lived response in
+    // Script Properties and consume it exactly once in doGet.
+    var resultProperties = PropertiesService.getScriptProperties();
+    var resultPrefix = 'DALEELAK_API_RESULT_';
+    var existingProperties = resultProperties.getProperties();
+    Object.keys(existingProperties).forEach(function(key) {
+      if (key.indexOf(resultPrefix) !== 0) return;
+      try {
+        var envelope = JSON.parse(existingProperties[key]);
+        if (!envelope || Number(envelope.expiresAt) <= Date.now()) {
+          resultProperties.deleteProperty(key);
+        }
+      } catch (ignored) {
+        resultProperties.deleteProperty(key);
+      }
+    });
+    resultProperties.setProperty(
+      resultPrefix + requestId,
+      JSON.stringify({ expiresAt: Date.now() + 120000, message: message })
     );
     return HtmlService.createHtmlOutput('<!doctype html><html><body>تم استلام الطلب.</body></html>')
       .setTitle('Daleelak API')
