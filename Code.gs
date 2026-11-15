@@ -9,7 +9,7 @@
 
 const APP = {
   title: 'دليلك السوداني',
-  version: '2.1.1',
+  version: '2.2.0',
   defaultCategories: [
     'صيانة المنازل', 'السيارات والنقل', 'العقارات والسكن', 'التعليم والتدريب',
     'التقنية والتصميم', 'المطاعم والطبخ المنزلي', 'المناسبات والخدمات الشخصية',
@@ -42,34 +42,16 @@ function doGet(e) {
   if (params.action === 'getApiResult' &&
       /^daleelakJsonp_[A-Za-z0-9_]{8,80}$/.test(callback) &&
       /^[A-Za-z0-9_-]{8,100}$/.test(resultRequestId)) {
-    var resultKey = 'DALEELAK_API_RESULT_' + resultRequestId;
+    var storedMessage = takeApiResult_(resultRequestId);
     var storedResult = null;
-    var resultLock = LockService.getScriptLock();
-    if (resultLock.tryLock(5000)) {
-      try {
-        var resultProperties = PropertiesService.getScriptProperties();
-        var storedText = resultProperties.getProperty(resultKey);
-        if (storedText) {
-          resultProperties.deleteProperty(resultKey);
-          try {
-            var storedEnvelope = JSON.parse(storedText);
-            if (storedEnvelope && Number(storedEnvelope.expiresAt) > Date.now() &&
-                storedEnvelope.message && storedEnvelope.message.type === 'daleelak-api-response' &&
-                storedEnvelope.message.requestId === resultRequestId) {
-              storedResult = JSON.stringify(storedEnvelope.message)
-                .replace(/</g, '\\u003c')
-                .replace(/>/g, '\\u003e')
-                .replace(/&/g, '\\u0026')
-                .replace(/\u2028/g, '\\u2028')
-                .replace(/\u2029/g, '\\u2029');
-            }
-          } catch (ignored) {
-            storedResult = null;
-          }
-        }
-      } finally {
-        resultLock.releaseLock();
-      }
+    if (storedMessage && storedMessage.type === 'daleelak-api-response' &&
+        storedMessage.requestId === resultRequestId) {
+      storedResult = JSON.stringify(storedMessage)
+        .replace(/</g, '\\u003c')
+        .replace(/>/g, '\\u003e')
+        .replace(/&/g, '\\u0026')
+        .replace(/\\u2028/g, '\\u2028')
+        .replace(/\\u2029/g, '\\u2029');
     }
     return ContentService.createTextOutput(callback + '(' + (storedResult || 'null') + ');')
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
@@ -139,31 +121,10 @@ function doPost(e) {
   if (ok) message.data = result;
   else message.error = error;
 
-  // Admin login uses a one-time JSONP result poll instead of iframe messaging.
-  // This avoids losing the response across Google's cross-origin redirects.
-  // The password is never placed in the URL; only the random request ID is.
-  if (action === 'adminLogin' && /^[A-Za-z0-9_-]{8,100}$/.test(requestId)) {
-    // CacheService is not reliable for a required hand-off: Google may evict
-    // entries before their requested TTL. Store this short-lived response in
-    // Script Properties and consume it exactly once in doGet.
-    var resultProperties = PropertiesService.getScriptProperties();
-    var resultPrefix = 'DALEELAK_API_RESULT_';
-    var existingProperties = resultProperties.getProperties();
-    Object.keys(existingProperties).forEach(function(key) {
-      if (key.indexOf(resultPrefix) !== 0) return;
-      try {
-        var envelope = JSON.parse(existingProperties[key]);
-        if (!envelope || Number(envelope.expiresAt) <= Date.now()) {
-          resultProperties.deleteProperty(key);
-        }
-      } catch (ignored) {
-        resultProperties.deleteProperty(key);
-      }
-    });
-    resultProperties.setProperty(
-      resultPrefix + requestId,
-      JSON.stringify({ expiresAt: Date.now() + 120000, message: message })
-    );
+  // Deliver every POST response through the same one-time JSONP bridge.
+  // Credentials and session tokens remain in the POST body, never in the URL.
+  if (/^[A-Za-z0-9_-]{8,100}$/.test(requestId)) {
+    storeApiResult_(requestId, message);
     return HtmlService.createHtmlOutput('<!doctype html><html><body>تم استلام الطلب.</body></html>')
       .setTitle('Daleelak API')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -211,7 +172,60 @@ function setupDatabase() {
   const existingCategoryNames = cats.getLastRow() >= 2
     ? cats.getRange(2, 1, cats.getLastRow() - 1, 1).getDisplayValues().flat().map(x => String(x).trim())
     : [];
-  const missingCategories = defaultCategories.filter(row => existingCategoryNames.indexOf(row[0]) === -1);
+  const missingCategories = defaultCategories.filter(row => exi
+
+function storeApiResult_(requestId, message) {
+  var props = PropertiesService.getScriptProperties();
+  var prefix = 'DALEELAK_API_RESULT_';
+  var suffix = '_META';
+  var all = props.getProperties();
+  Object.keys(all).forEach(function(key) {
+    if (key.indexOf(prefix) !== 0 || key.slice(-suffix.length) !== suffix) return;
+    try {
+      var meta = JSON.parse(all[key]);
+      if (!meta || Number(meta.expiresAt) <= Date.now()) {
+        var base = key.slice(0, -suffix.length);
+        for (var n = 0; n < Number(meta && meta.chunks || 0); n++) props.deleteProperty(base + '_CHUNK_' + n);
+        props.deleteProperty(key);
+      }
+    } catch (ignored) { props.deleteProperty(key); }
+  });
+  var json = JSON.stringify({ expiresAt: Date.now() + 120000, message: message });
+  var chunkSize = 7000;
+  var count = Math.ceil(json.length / chunkSize);
+  var baseKey = prefix + requestId;
+  for (var i = 0; i < count; i++) props.setProperty(baseKey + '_CHUNK_' + i, json.slice(i * chunkSize, (i + 1) * chunkSize));
+  props.setProperty(baseKey + suffix, JSON.stringify({ expiresAt: Date.now() + 120000, chunks: count }));
+}
+
+function takeApiResult_(requestId) {
+  var props = PropertiesService.getScriptProperties();
+  var baseKey = 'DALEELAK_API_RESULT_' + requestId;
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return null;
+  try {
+    var metaText = props.getProperty(baseKey + '_META');
+    if (metaText) {
+      var meta = JSON.parse(metaText);
+      var chunks = [];
+      for (var i = 0; i < Number(meta.chunks || 0); i++) chunks.push(props.getProperty(baseKey + '_CHUNK_' + i) || '');
+      props.deleteProperty(baseKey + '_META');
+      for (var j = 0; j < chunks.length; j++) props.deleteProperty(baseKey + '_CHUNK_' + j);
+      if (Number(meta.expiresAt) <= Date.now()) return null;
+      var envelope = JSON.parse(chunks.join(''));
+      return envelope && Number(envelope.expiresAt) > Date.now() ? envelope.message : null;
+    }
+    var legacyText = props.getProperty(baseKey);
+    if (!legacyText) return null;
+    props.deleteProperty(baseKey);
+    var legacy = JSON.parse(legacyText);
+    return legacy && Number(legacy.expiresAt) > Date.now() ? legacy.message : null;
+  } catch (err) {
+    return null;
+  } finally {
+    lock.releaseLock();
+  }
+}stingCategoryNames.indexOf(row[0]) === -1);
   if (missingCategories.length) {
     cats.getRange(cats.getLastRow() + 1, 1, missingCategories.length, 2).setValues(missingCategories);
   }
