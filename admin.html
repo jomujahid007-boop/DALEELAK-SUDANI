@@ -130,7 +130,7 @@ function apiCall(action,payload={}){
       const removeScript=()=>{scripts.delete(script);script.remove();try{delete window[callbackName];}catch(_){window[callbackName]=undefined;}};
       window[callbackName]=(message)=>{
         removeScript();if(finished)return;
-        if(message===null){pollTimer=setTimeout(poll,900);return;}
+        if(message===null){pollTimer=setTimeout(poll,450);return;}
         if(message&&message.ok)finish(null,message.data);
         else finish(new Error(message&&message.error?message.error:'تعذر تنفيذ الطلب على الخادم.'));
       };
@@ -140,7 +140,7 @@ function apiCall(action,payload={}){
     };
     timeoutTimer=setTimeout(()=>finish(new Error('انتهت مهلة استجابة الخادم. لم يصل رد العملية بعد.')),90000);
     document.body.appendChild(iframe);document.body.appendChild(form);
-    try{form.submit();pollTimer=setTimeout(poll,1000);}catch(err){finish(err);}
+    try{form.submit();pollTimer=setTimeout(poll,250);}catch(err){finish(err);}
   });
 }
 
