@@ -156,6 +156,10 @@ body[dir="ltr"] .add{inset-inline-start:auto;inset-inline-end:22px}
   .brand-block .brand-english{font-size:13px;letter-spacing:.2px}
   .brand-block .brand-tagline{font-size:12px;margin-top:2px}
 }
+
+/* Short customer payment-safety notice shown at the end of every public listing */
+.payment-safety-note{grid-column:1/-1;margin:0;padding:7px 10px;border:1px solid rgba(181,126,35,.22);border-radius:9px;background:rgba(233,189,77,.09);color:var(--muted);font-size:10px;line-height:1.65;font-weight:600}
+@media(min-width:681px){.payment-safety-note{font-size:11px}}
 </style>
 </head>
 <body>
@@ -433,6 +437,7 @@ function providerCard(p){
       ${expandable?`<div class="desc"><details class="desc-details"><summary><span class="desc-preview">${esc(shortDescription)}</span><span class="more-label">${tr('more')}</span><span class="less-label">${tr('less')}</span></summary><div class="desc-full">${esc(description)}</div></details></div>`:`<div class="desc">${esc(description)}</div>`}
     </div>
     <div class="actions">${wa?`<a class="btn wa" target="_blank" rel="noopener noreferrer" href="https://wa.me/${wa}">${tr('contactWhatsApp')}</a>`:''}${phone?`<a class="btn call" href="tel:${attr(phone)}">${tr('call')}</a>`:''}</div>
+    <p class="payment-safety-note">${language==='ar'?'تنبيه: لا تدفع أي رسوم لمقدم الخدمة قبل إتمام الخدمة أو مقابلته.':'Safety notice: Do not pay the provider before the service is completed or you meet them.'}</p>
   </article>`;
 }
 function render(){
