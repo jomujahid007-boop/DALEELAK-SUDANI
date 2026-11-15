@@ -211,7 +211,7 @@ function storeApiResult_(requestId, message) {
         var meta = JSON.parse(all[key]);
         if (!meta || Number(meta.expiresAt) <= now) {
           var base = key.slice(0, -suffix.length);
-          for (var n = 0; n < Math.min(20, Number(meta && meta.chunks || 0)); n++) {
+          for (var n = 0; n < Number(meta && meta.chunks || 0); n++) {
             props.deleteProperty(base + '_CHUNK_' + n);
           }
           props.deleteProperty(key);
