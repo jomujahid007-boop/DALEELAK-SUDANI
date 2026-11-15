@@ -6,6 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#07583d">
   <meta name="description" content="دليلك السوداني — خدمات ومقدمو خدمات بين السودان والسعودية">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="دليلك السوداني">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./icon.svg">
   <title>دليلك السوداني</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -161,6 +167,7 @@ body[dir="ltr"] .add{inset-inline-start:auto;inset-inline-end:22px}
         <button class="top-control" id="languageButton" type="button" onclick="toggleLanguage()">🌐 English</button>
         <button class="top-control" id="themeButton" type="button" onclick="toggleTheme()">🌙 ليلي</button>
         <button class="admin-link" id="adminLink" type="button" onclick="openAdminLogin()">الإدارة</button>
+        <button class="top-control" id="installAppButton" type="button" onclick="installDaleelakApp()">📲 تثبيت التطبيق</button>
         <a class="contact-link" id="contactLink" data-i18n="complaints" href="https://wa.me/966501966757?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%20%D9%88%D8%B1%D8%AD%D9%85%D8%A9%20%D8%A7%D9%84%D9%84%D9%87%20%D9%88%D8%A8%D8%B1%D9%83%D8%A7%D8%AA%D9%87.%20%D9%84%D8%AF%D9%8A%D9%91%20%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%A8%D8%AE%D8%B5%D9%88%D8%B5%20%D8%AF%D9%84%D9%8A%D9%84%D9%83%20%D8%A7%D9%84%D8%B3%D9%88%D8%AF%D8%A7%D9%86%D9%8A%D8%8C%20%D9%88%D8%A3%D8%B1%D8%AC%D9%88%20%D8%A7%D9%84%D9%85%D8%B3%D8%A7%D8%B9%D8%AF%D8%A9.%20%D8%B4%D9%83%D8%B1%D8%A7%D9%8B%20%D9%84%D9%83%D9%85." target="_blank" rel="noopener noreferrer">الشكاوى والاستفسارات</a>
       </div>
     </div>
@@ -717,6 +724,61 @@ function initApp(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initApp,{once:true});else initApp();
 
+</script>
+
+<script>
+(function(){
+  let deferredInstallPrompt = null;
+  const installButton = document.getElementById('installAppButton');
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+  if (isStandalone && installButton) {
+    installButton.textContent = '✓ التطبيق مثبت';
+    installButton.disabled = true;
+    installButton.setAttribute('aria-label','التطبيق مثبت بالفعل');
+  }
+
+  window.addEventListener('beforeinstallprompt', function(event){
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    if (installButton && !isStandalone) installButton.hidden = false;
+  });
+
+  window.addEventListener('appinstalled', function(){
+    deferredInstallPrompt = null;
+    if (installButton) {
+      installButton.textContent = '✓ تم تثبيت التطبيق';
+      installButton.disabled = true;
+    }
+  });
+
+  window.installDaleelakApp = async function(){
+    if (isStandalone) {
+      alert('تطبيق دليلك السوداني مثبت بالفعل على جهازك.');
+      return;
+    }
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      try { await deferredInstallPrompt.userChoice; } catch (_) {}
+      deferredInstallPrompt = null;
+      return;
+    }
+    if (isIos) {
+      alert('لتثبيت دليلك السوداني على iPhone أو iPad:\n1. افتح الموقع من متصفح Safari.\n2. اضغط زر المشاركة أسفل الشاشة.\n3. اختر «إضافة إلى الشاشة الرئيسية».\n4. اضغط «إضافة».');
+      return;
+    }
+    alert('إذا لم يظهر خيار التثبيت، افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».');
+  };
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./service-worker.js', {scope:'./'})
+        .catch(function(error){ console.warn('تعذر تسجيل خدمة التطبيق:', error); });
+    }, {once:true});
+  }
+})();
 </script>
 </body>
 </html>
