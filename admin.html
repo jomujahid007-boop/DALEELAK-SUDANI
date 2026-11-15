@@ -94,15 +94,16 @@ window.addEventListener('message',function(event){
   else pending.reject(new Error(m.error||'حدث خطأ في الخادم.'));
 });
 function apiCall(action,payload={}){
-  // Login uses a direct iframe response instead of JSONP polling. The password
-  // is still POST-only and the response is accepted only from this iframe.
+  // Login uses a direct iframe response instead of JSONP polling, so the
+  // authentication result is returned immediately without repeated GET requests.
+  // The password remains POST-only; the longer guard allows one safe legacy-hash migration.
   if(action==='adminLogin'){
     return new Promise((resolve,reject)=>{
       const requestId='dl_login_'+Date.now().toString(36)+'_'+(++apiSequence).toString(36);
       const iframe=document.createElement('iframe');iframe.name='daleelak_post_'+requestId;iframe.style.display='none';iframe.setAttribute('aria-hidden','true');
       const form=document.createElement('form');form.method='POST';form.action=API_URL;form.target=iframe.name;form.style.display='none';
       [['action',action],['requestId',requestId],['payload',JSON.stringify(payload||{})]].forEach(([name,value])=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input);});
-      const timer=setTimeout(()=>{apiRequests.delete(requestId);form.remove();iframe.remove();reject(new Error('انتهت مهلة التحقق من كلمة المرور. حاول مرة أخرى.'));},45000);
+      const timer=setTimeout(()=>{apiRequests.delete(requestId);form.remove();iframe.remove();reject(new Error('انتهت مهلة التحقق من كلمة المرور. حاول مرة أخرى.'));},180000);
       apiRequests.set(requestId,{iframe,form,timer,resolve,reject});
       document.body.appendChild(iframe);document.body.appendChild(form);
       try{form.submit();}catch(err){clearTimeout(timer);apiRequests.delete(requestId);form.remove();iframe.remove();reject(err);}
