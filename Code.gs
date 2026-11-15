@@ -409,13 +409,29 @@ function adminLogin(password) {
     });
   }
 
+  // Admin sessions use Script Properties rather than CacheService so an
+  // otherwise valid login is not randomly invalidated by cache eviction.
+  const sessionProperties = PropertiesService.getScriptProperties();
+  const sessionPrefix = 'DALEELAK_ADMIN_SESSION_';
+  const allProperties = sessionProperties.getProperties();
+  Object.keys(allProperties).forEach(function(key) {
+    if (key.indexOf(sessionPrefix) !== 0) return;
+    if (Number(allProperties[key]) <= Date.now()) sessionProperties.deleteProperty(key);
+  });
   const token = Utilities.getUuid() + Utilities.getUuid();
-  CacheService.getScriptCache().put('admin_session_' + token, '1', APP.adminSessionSeconds);
+  sessionProperties.setProperty(
+    sessionPrefix + token,
+    String(Date.now() + APP.adminSessionSeconds * 1000)
+  );
   return { ok: true, token: token, expiresIn: APP.adminSessionSeconds };
 }
 
 function adminLogout(token) {
-  if (token) CacheService.getScriptCache().remove('admin_session_' + String(token));
+  token = String(token || '');
+  if (token && token.length <= 200) {
+    PropertiesService.getScriptProperties().deleteProperty('DALEELAK_ADMIN_SESSION_' + token);
+    CacheService.getScriptCache().remove('admin_session_' + token);
+  }
   return { ok: true };
 }
 
@@ -610,8 +626,14 @@ function adminDeleteProvider(token, id) {
 
 function requireAdmin_(token) {
   token = String(token || '');
-  if (!token || token.length > 200 ||
-      CacheService.getScriptCache().get('admin_session_' + token) !== '1') {
+  if (!token || token.length > 200) {
+    throw new Error('انتهت جلسة الإدارة. سجّل الدخول مرة أخرى.');
+  }
+  const key = 'DALEELAK_ADMIN_SESSION_' + token;
+  const properties = PropertiesService.getScriptProperties();
+  const expiresAt = Number(properties.getProperty(key) || 0);
+  if (!expiresAt || expiresAt <= Date.now()) {
+    if (expiresAt) properties.deleteProperty(key);
     throw new Error('انتهت جلسة الإدارة. سجّل الدخول مرة أخرى.');
   }
 }
