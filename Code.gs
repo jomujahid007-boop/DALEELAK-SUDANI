@@ -9,7 +9,7 @@
 
 const APP = {
   title: 'دليلك السوداني',
-  version: '2.2.0',
+  version: '2.3.0',
   defaultCategories: [
     'صيانة المنازل', 'السيارات والنقل', 'العقارات والسكن', 'التعليم والتدريب',
     'التقنية والتصميم', 'المطاعم والطبخ المنزلي', 'المناسبات والخدمات الشخصية',
@@ -33,6 +33,16 @@ function doGet(e) {
   // Public read-only JSONP bridge for GitHub Pages.
   // Avoids hidden-iframe postMessage failures on some mobile browsers.
   var params = e && e.parameter ? e.parameter : {};
+
+  // Serve the administration UI from Apps Script itself. This keeps
+  // google.script.run same-origin and removes the cross-domain iframe bridge
+  // from every administrative operation.
+  if (String(params.page || '').toLowerCase() === 'admin') {
+    return HtmlService.createHtmlOutputFromFile('Admin')
+      .setTitle('لوحة إدارة دليلك السوداني')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
   var callback = String(params.callback || '');
 
   // One-time result retrieval for sensitive POST actions such as admin login.
@@ -354,6 +364,22 @@ function submitPaymentReference(payload) {
  * First login migrates ADMIN_PASSWORD into a salted hash.
  * Set ADMIN_PASSWORD under Project Settings > Script Properties before use.
  */
+
+
+function adminHealth() {
+  const props = PropertiesService.getScriptProperties();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const providers = ss ? ss.getSheetByName(APP.sheets.providers) : null;
+  return {
+    ok: true,
+    version: APP.version,
+    databaseConnected: !!ss && !!providers,
+    providersCount: providers ? Math.max(0, providers.getLastRow() - 1) : 0,
+    passwordConfigured: !!(props.getProperty('ADMIN_PASSWORD_HASH') || props.getProperty('ADMIN_PASSWORD')),
+    serverTime: new Date().toISOString()
+  };
+}
+
 function adminLogin(password) {
   const supplied = String(password || '');
   if (!supplied || supplied.length > 256) throw new Error('أدخل كلمة مرور الإدارة الصحيحة.');
