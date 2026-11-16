@@ -1,68 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 600" role="img" aria-labelledby="title desc">
-<title id="title">دليلك — كل خدماتك في مكان واحد</title>
-<desc id="desc">بانر دليلك بخلفية أفق مدينة الرياض وعلم المملكة العربية السعودية فقط على الجهة اليمنى.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 425" role="img" aria-labelledby="title desc">
+<title id="title">دليلك</title><desc id="desc">دليلك، التصميم الأصلي المعتمد مع أعلام الدول العربية وعلم السودان والسعودية</desc>
 <defs>
- <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#69b8e9"/><stop offset=".58" stop-color="#f8d8b6"/><stop offset="1" stop-color="#f3bd72"/></linearGradient>
- <linearGradient id="sunset" x2="0" y2="1"><stop stop-color="#fff3d7" stop-opacity="0"/><stop offset="1" stop-color="#f3a84e" stop-opacity=".7"/></linearGradient>
- <linearGradient id="green" x2="0" y2="1"><stop stop-color="#087b49"/><stop offset="1" stop-color="#03442e"/></linearGradient>
- <linearGradient id="gold"><stop stop-color="#b98c37"/><stop offset=".5" stop-color="#f4d27c"/><stop offset="1" stop-color="#b98c37"/></linearGradient>
- <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#092f22" flood-opacity=".25"/></filter>
- <pattern id="windows" width="18" height="24" patternUnits="userSpaceOnUse"><rect x="5" y="5" width="5" height="9" rx="1" fill="#f7d88e" opacity=".75"/></pattern>
+ <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d8edf4"/><stop offset=".55" stop-color="#f5dfbd"/><stop offset="1" stop-color="#9fc6b3"/></linearGradient>
+ <linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#08754d"/><stop offset="1" stop-color="#03442f"/></linearGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#c99b36"/><stop offset=".5" stop-color="#f2d47b"/><stop offset="1" stop-color="#c99b36"/></linearGradient>
 </defs>
-<rect width="1800" height="600" fill="url(#sky)"/>
-<circle cx="270" cy="115" r="90" fill="#fff4d8" opacity=".24"/>
-<path d="M0 320 Q260 280 500 325T980 300T1400 310T1800 270V600H0Z" fill="url(#sunset)"/>
-<!-- Riyadh skyline -->
-<g fill="#244b4b" opacity=".82">
- <path d="M0 410h60v-92h45v92h30v-125h42v125h35v-75h52v75h34v-115h50v115h34v-65h42v65h40v-145h48v145h38v-95h58v95h30v-125h48v125h38v-85h45v85h35v-150h42v150h42v-95h52v95h34v-135h48v135h35v-80h52v80h40v-115h44v115h38v-80h48v80h40v-135h44v135h40v-92h52v92h34v-120h46v120h40v-82h48v82h30v-110h46v110h30v-75h42v75h40v-95h45v95h30v-70h42v70h40v-105h48v105h45v-75h42v75h35v-115h50v115h35v-70h45v70h50v190H0Z"/>
+<rect width="1240" height="425" rx="26" fill="url(#sky)"/>
+<circle cx="625" cy="125" r="105" fill="#fff" opacity=".22"/>
+<g fill="#527f70" opacity=".65">
+ <path d="M0 335h1240v90H0z"/>
+ <path d="M0 298h42v80H0zm52-38h34v118H52zm44 18h55v100H96zm64-55h42v155h-42zm52 40h36v115h-36zm47-29h48v144h-48zm57 58h33v86h-33zm44-45h54v131h-54zm64 25h36v106h-36zm44-56h48v162h-48zm57 49h42v113h-42zm56-31h62v144h-62zm72 45h38v99h-38zm48-62h45v161h-45zm56 32h38v129h-38zm49-48h55v177h-55zm64 53h37v124h-37zm48-34h52v158h-52zm60 45h40v113h-40zm48-58h55v171h-55zm63 47h43v124h-43zm52-27h50v151h-50z"/>
 </g>
-<g fill="url(#windows)" opacity=".85">
- <path d="M0 410h60v-92h45v92h30v-125h42v125h35v-75h52v75h34v-115h50v115h34v-65h42v65h40v-145h48v145h38v-95h58v95h30v-125h48v125h38v-85h45v85h35v-150h42v150h42v-95h52v95h34v-135h48v135h35v-80h52v80h40v-115h44v115h38v-80h48v80h40v-135h44v135h40v-92h52v92h34v-120h46v120h40v-82h48v82h30v-110h46v110h30v-75h42v75h40v-95h45v95h30v-70h42v70h40v-105h48v105h45v-75h42v75h35v-115h50v115h35v-70h45v70h50v190H0Z"/>
+<g fill="#fff" opacity=".22"><path d="M0 0h1240v425H0z"/></g>
+<g font-family="Arial,sans-serif" font-size="39" text-anchor="middle">
+ <text x="54" y="83">🇸🇩</text><text x="111" y="83">🇪🇬</text><text x="168" y="83">🇦🇪</text><text x="225" y="83">🇶🇦</text><text x="282" y="83">🇰🇼</text><text x="339" y="83">🇧🇭</text><text x="396" y="83">🇴🇲</text>
+ <text x="54" y="158">🇾🇪</text><text x="111" y="158">🇯🇴</text><text x="168" y="158">🇵🇸</text><text x="225" y="158">🇱🇧</text><text x="282" y="158">🇸🇾</text><text x="339" y="158">🇮🇶</text><text x="396" y="158">🇲🇦</text>
+ <text x="54" y="233">🇩🇿</text><text x="111" y="233">🇹🇳</text><text x="168" y="233">🇱🇾</text><text x="225" y="233">🇲🇷</text><text x="282" y="233">🇸🇴</text><text x="339" y="233">🇩🇯</text><text x="396" y="233">🇰🇲</text>
 </g>
-<!-- Kingdom Centre silhouette -->
-<g transform="translate(1265 118)" filter="url(#shadow)">
- <path d="M50 292 76 40Q88 4 108 40l27 252Z" fill="#27546a"/>
- <path d="M82 42Q101 17 119 42l-10 76h-18Z" fill="#f4c45e"/>
- <path d="M96 120h13v172H96Z" fill="#1c4055"/>
- <path d="M96 20 103 0l7 20" fill="none" stroke="#e7edf0" stroke-width="5"/>
+<g transform="translate(1020 42)">
+ <path d="M0 0c-5 28-4 53 0 80" stroke="#fff" stroke-width="7" fill="none"/>
+ <path d="M4 5c58-10 133-6 190 13v187c-62 22-132 23-190 5z" fill="#087b43"/>
+ <g fill="#fff" font-family="Arial,sans-serif" text-anchor="middle"><text x="98" y="78" font-size="24">لا إله إلا الله</text><text x="98" y="111" font-size="24">محمد رسول الله</text><path d="M51 137h96" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M72 150h54" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>
 </g>
-<g fill="#174b43" opacity=".9">
- <path d="M1120 410 1145 235l22-42 20 42 25 175Z"/>
- <path d="M1195 410 1215 270l18-35 18 35 22 140Z"/>
- <path d="M1370 410 1390 250l22-40 22 40 20 160Z"/>
- <path d="M1480 410 1498 290l18-30 18 30 20 120Z"/>
- <path d="M1580 410 1600 245l20-35 20 35 20 165Z"/>
+<g text-anchor="middle" font-family="Tahoma,Arial,sans-serif">
+ <path d="M505 65h230l-115-42z" fill="url(#green)"/>
+ <circle cx="620" cy="76" r="37" fill="url(#green)" stroke="#fff" stroke-width="5"/>
+ <path d="M620 53c-13 0-22 10-22 22 0 15 22 34 22 34s22-19 22-34c0-12-9-22-22-22zm0 14a8 8 0 1 1 0 16 8 8 0 0 1 0-16z" fill="#fff"/>
+ <text x="620" y="211" font-size="83" font-weight="900" fill="#064b35">دليلك</text>
+ <text x="620" y="252" font-size="22" font-weight="700" fill="#365c4b">دليل الخدمات في الدول العربية</text>
 </g>
-<!-- palm silhouettes -->
-<g stroke="#15563b" stroke-width="8" fill="none" stroke-linecap="round">
- <path d="M80 430v-65m0 0q-55-48-65-10m65 10q-4-55-35-66m35 66q24-54 54-52m-54 52q49-18 66 13"/>
- <path d="M240 430v-70m0 0q-48-44-62-7m62 7q-2-53-31-66m31 66q26-51 55-49m-55 49q48-16 65 13"/>
- <path d="M1690 430v-68m0 0q-50-44-63-7m63 7q-2-52-31-65m31 65q27-50 55-48m-55 48q48-16 65 13"/>
-</g>
-<!-- Saudi flag only -->
-<g transform="translate(1555 36)" filter="url(#shadow)">
- <path d="M8 0v385" stroke="#d5dce0" stroke-width="9"/>
- <circle cx="8" cy="0" r="11" fill="#e9edf0" stroke="#8b969a" stroke-width="3"/>
- <path d="M17 35 Q125 7 226 42 L225 247 Q118 273 17 236Z" fill="#087a43"/>
- <path d="M26 47 Q121 20 215 51" fill="none" stroke="#2a9b61" stroke-width="5" opacity=".6"/>
- <g fill="#fff" text-anchor="middle" font-family="Tahoma,Arial,sans-serif">
-  <text x="121" y="113" font-size="31" font-weight="700">لا إله إلا الله</text>
-  <text x="121" y="153" font-size="31" font-weight="700">محمد رسول الله</text>
-  <path d="M60 181h127" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
-  <path d="M76 195h100" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
- </g>
-</g>
-<!-- Main brand -->
-<g text-anchor="middle" font-family="Tahoma,Arial,sans-serif" filter="url(#shadow)">
- <path d="M570 170 Q900 45 1230 170" fill="none" stroke="#0a7046" stroke-width="7" stroke-linecap="round"/>
- <path d="M900 25c-47 0-83 37-83 83 0 58 83 129 83 129s83-71 83-129c0-46-36-83-83-83Z" fill="url(#green)" stroke="#fff" stroke-width="8"/>
- <path d="M862 127h18V90h12v37h15V72h13v55h13V99h12v28h14v20h-97Z" fill="#fff" opacity=".96"/>
- <text x="900" y="335" font-size="145" font-weight="900" fill="#06452f" stroke="#fff" stroke-width="3" paint-order="stroke">دليلك</text>
-</g>
-<!-- lower ribbon -->
-<path d="M0 455 Q430 390 900 444T1800 420V600H0Z" fill="url(#green)"/>
-<path d="M0 455 Q430 390 900 444T1800 420" fill="none" stroke="url(#gold)" stroke-width="9"/>
-<path d="M0 510 Q450 450 900 495T1800 470" fill="none" stroke="#fff" stroke-width="8" opacity=".95"/>
-<rect x="520" y="440" width="760" height="112" rx="56" fill="#03442e" stroke="url(#gold)" stroke-width="4" filter="url(#shadow)"/>
-<text x="900" y="512" text-anchor="middle" font-family="Tahoma,Arial,sans-serif" font-size="48" font-weight="900" fill="#fff">كل خدماتك .. في مكان واحد</text>
+<path d="M0 326Q260 370 620 337T1240 326v99H0z" fill="url(#green)"/>
+<path d="M0 326Q260 370 620 337T1240 326" fill="none" stroke="url(#gold)" stroke-width="8"/>
+<rect x="340" y="345" width="560" height="60" rx="30" fill="#03442f" stroke="url(#gold)" stroke-width="2"/>
+<text x="620" y="386" font-family="Tahoma,Arial,sans-serif" font-size="29" font-weight="800" fill="#fff" text-anchor="middle">كل خدماتك .. في مكان واحد</text>
 </svg>
