@@ -13,7 +13,7 @@ const APP = {
   defaultCategories: [
     'صيانة المنازل', 'السيارات والنقل', 'العقارات والسكن', 'التعليم والتدريب',
     'التقنية والتصميم', 'المطاعم والطبخ المنزلي', 'المناسبات والخدمات الشخصية',
-    'خدمات أخرى', 'تاكسي ومشاوير', 'توصيل طلبات', 'توصيل طرود وأغراض',
+    'خدمات أخرى', 'تاكسي ومشاوير', 'توصيل مشاوير', 'توصيل طلبات', 'توصيل طرود وأغراض',
     'خدمات التوصيل والترحيب', 'نقل عفش وأثاث'
   ],
   sheets: {
@@ -26,7 +26,8 @@ const APP = {
   listingRateHourly: 3,
   listingRateDaily: 6,
   adminPasswordIterations: 12000,
-  paymentColumns: ['PaymentStatus', 'PaymentAmount', 'PaymentMethod', 'PaymentReference', 'PaymentSubmittedAt', 'PaymentVerifiedAt']
+  paymentColumns: ['PaymentStatus', 'PaymentAmount', 'PaymentMethod', 'PaymentReference', 'PaymentSubmittedAt', 'PaymentVerifiedAt'],
+  listingDurationDays: 30
 };
 
 function doGet(e) {
@@ -247,6 +248,9 @@ function getPublicData() {
   if (!providersSheet || !categoriesSheet) throw new Error('أوراق قاعدة البيانات غير مكتملة. تأكد من وجود Providers و Categories.');
 
   ensureProviderImageColumn_(providersSheet);
+  ensurePublishedAtColumn_(providersSheet);
+  ensureCategoryExists_(categoriesSheet, 'توصيل مشاوير');
+  ensureListingLifecycle_();
   const providerHeaders = getHeaders_(providersSheet);
   const requiredProviderHeaders = ['ID', 'Status', 'Name', 'Category', 'City', 'Description', 'Phone', 'WhatsApp', 'Featured'];
   const missingHeaders = requiredProviderHeaders.filter(name => providerHeaders.indexOf(name) === -1);
@@ -318,7 +322,7 @@ function submitProviderListing(form) {
       Name: name, Category: category, City: city, Description: description,
       Phone: phone, WhatsApp: whatsapp, Featured: false, Images: JSON.stringify(imageIds),
       PaymentStatus: 'AwaitingPayment', PaymentAmount: APP.listingFee,
-      PaymentMethod: '', PaymentReference: '', PaymentSubmittedAt: '', PaymentVerifiedAt: ''
+      PaymentMethod: '', PaymentReference: '', PaymentSubmittedAt: '', PaymentVerifiedAt: '', PublishedAt: ''
     };
     try {
       imageIds = saveProviderImages_(form.images || [], id);
@@ -531,6 +535,10 @@ function adminSetProviderStatus(token, id, status) {
       throw new Error('لا يمكن نشر الإعلان قبل تأكيد الدفع من زر «تأكيد الدفع ونشر الإعلان».');
     }
     sh.getRange(row, statusCol).setValue(status);
+    if (status === 'Approved') {
+      const publishedAtCol = ensurePublishedAtColumn_(sh);
+      if (!sh.getRange(row, publishedAtCol).getValue()) sh.getRange(row, publishedAtCol).setValue(new Date());
+    }
     return { ok: true, status: status };
   } finally {
     lock.releaseLock();
@@ -552,7 +560,8 @@ function adminConfirmPaymentAndApprove(token, id) {
     const statusCol = headers.indexOf('Status') + 1;
     const paymentStatusCol = headers.indexOf('PaymentStatus') + 1;
     const verifiedAtCol = headers.indexOf('PaymentVerifiedAt') + 1;
-    if (!idCol || !statusCol || !paymentStatusCol || !verifiedAtCol) {
+    const publishedAtCol = ensurePublishedAtColumn_(sh);
+    if (!idCol || !statusCol || !paymentStatusCol || !verifiedAtCol || !publishedAtCol) {
       throw new Error('أعمدة الدفع غير مكتملة.');
     }
     const row = findProviderRow_(sh, idCol, id);
@@ -573,7 +582,9 @@ function adminConfirmPaymentAndApprove(token, id) {
     if (method !== 'BankTransfer' && method !== 'STCPay') throw new Error('طريقة الدفع المسجلة غير صحيحة.');
 
     sh.getRange(row, paymentStatusCol).setValue('Verified');
-    sh.getRange(row, verifiedAtCol).setValue(new Date());
+    const publishedAt = new Date();
+    sh.getRange(row, verifiedAtCol).setValue(publishedAt);
+    sh.getRange(row, publishedAtCol).setValue(publishedAt);
     sh.getRange(row, statusCol).setValue('Approved');
     return { ok: true, status: 'Approved', paymentStatus: 'Verified' };
   } finally {
@@ -755,6 +766,59 @@ function trashProviderImages_(ids) {
   (ids || []).forEach(id => {
     try { DriveApp.getFileById(String(id)).setTrashed(true); } catch (err) {}
   });
+}
+
+/* -------------------- LISTING EXPIRATION -------------------- */
+function ensurePublishedAtColumn_(sh) {
+  const headers = getHeaders_(sh);
+  let col = headers.indexOf('PublishedAt') + 1;
+  if (!col) { col = sh.getLastColumn() + 1; sh.getRange(1, col).setValue('PublishedAt').setFontWeight('bold'); }
+  return col;
+}
+function ensureCategoryExists_(sh, name) {
+  const headers = getHeaders_(sh), nameCol = headers.indexOf('Name') + 1, activeCol = headers.indexOf('Active') + 1;
+  if (!nameCol || !activeCol) throw new Error('عناوين ورقة Categories غير صحيحة.');
+  const lastRow = sh.getLastRow();
+  const names = lastRow >= 2 ? sh.getRange(2, nameCol, lastRow - 1, 1).getDisplayValues().flat().map(x => String(x).trim()) : [];
+  if (!names.includes(name)) { const row = new Array(sh.getLastColumn()).fill(''); row[nameCol - 1] = name; row[activeCol - 1] = true; sh.appendRow(row); }
+}
+function ensureListingLifecycle_() {
+  const sh = getProvidersSheet_(), publishedAtCol = ensurePublishedAtColumn_(sh), props = PropertiesService.getScriptProperties();
+  if (props.getProperty('LISTING_LIFECYCLE_INITIALIZED') !== '1') {
+    const headers = getHeaders_(sh), statusCol = headers.indexOf('Status') + 1, lastRow = sh.getLastRow();
+    if (statusCol && lastRow >= 2) {
+      const statuses = sh.getRange(2, statusCol, lastRow - 1, 1).getDisplayValues(), dates = sh.getRange(2, publishedAtCol, lastRow - 1, 1).getValues(), now = new Date();
+      let changed = false;
+      for (let i = 0; i < statuses.length; i++) if (String(statuses[i][0]).toLowerCase() === 'approved' && !dates[i][0]) { dates[i][0] = now; changed = true; }
+      if (changed) sh.getRange(2, publishedAtCol, lastRow - 1, 1).setValues(dates);
+    }
+    props.setProperty('LISTING_LIFECYCLE_INITIALIZED', '1');
+  }
+  const hasTrigger = ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'cleanupExpiredListings_');
+  if (!hasTrigger) ScriptApp.newTrigger('cleanupExpiredListings_').timeBased().everyDays(1).atHour(3).create();
+  cleanupExpiredListings_();
+}
+function cleanupExpiredListings_() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return { ok: false, skipped: true };
+  try {
+    const sh = getProvidersSheet_(), publishedAtCol = ensurePublishedAtColumn_(sh), headers = getHeaders_(sh);
+    const statusCol = headers.indexOf('Status') + 1, imagesCol = headers.indexOf('Images') + 1, lastRow = sh.getLastRow();
+    if (!statusCol) throw new Error('عمود Status غير موجود في Providers.');
+    if (lastRow < 2) return { ok: true, deletedCount: 0 };
+    const values = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues(), cutoff = Date.now() - APP.listingDurationDays * 86400000;
+    const expiredRows = [], imageIds = [];
+    values.forEach((row, i) => {
+      const date = row[publishedAtCol - 1];
+      if (String(row[statusCol - 1] || '').toLowerCase() === 'approved' && date instanceof Date && date.getTime() <= cutoff) {
+        expiredRows.push(i + 2);
+        if (imagesCol) imageIds.push(...parseProviderImages_(row[imagesCol - 1]));
+      }
+    });
+    expiredRows.forEach(row => sh.getRange(row, statusCol).setValue('Deleted'));
+    if (imageIds.length) trashProviderImages_(imageIds);
+    return { ok: true, deletedCount: expiredRows.length };
+  } finally { lock.releaseLock(); }
 }
 
 /* -------------------- HELPERS -------------------- */
