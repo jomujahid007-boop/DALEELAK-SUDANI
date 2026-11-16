@@ -727,7 +727,23 @@ function showAdminMessage(id,message,isError){
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function attr(s){return esc(s).replace(/`/g,'&#96;')}
+
+function trackUniqueVisitor(){
+  try{
+    const key='daleelakVisitorId';
+    let visitorId=localStorage.getItem(key);
+    if(!visitorId){
+      visitorId=window.crypto&&typeof window.crypto.randomUUID==='function'
+        ?window.crypto.randomUUID()
+        :'dl-'+Array.from(window.crypto&&window.crypto.getRandomValues?window.crypto.getRandomValues(new Uint8Array(24)):Array.from({length:24},()=>Math.floor(Math.random()*256)),b=>b.toString(16).padStart(2,'0')).join('');
+      localStorage.setItem(key,visitorId);
+    }
+    apiCall('recordVisitor',{visitorId}).catch(()=>{});
+  }catch(_){}
+}
+
 function initApp(){
+  trackUniqueVisitor();
   const year=document.getElementById('year');if(year)year.textContent=new Date().getFullYear();
   applyTheme();applyLanguage();applyListingView();load();
   if(adminToken){showAdmin();loadAdmin();}
