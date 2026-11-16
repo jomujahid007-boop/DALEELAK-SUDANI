@@ -34,14 +34,7 @@ function doGet(e) {
   // Avoids hidden-iframe postMessage failures on some mobile browsers.
   var params = e && e.parameter ? e.parameter : {};
 
-  // Serve the administration UI from Apps Script itself. This keeps
-  // google.script.run same-origin and removes the cross-domain iframe bridge
-  // from every administrative operation.
-  if (String(params.page || '').toLowerCase() === 'admin') {
-    return HtmlService.createHtmlOutputFromFile('Admin')
-      .setTitle('لوحة إدارة دليلك')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
-  }
+  // This deployment is an API endpoint only. Public and admin interfaces live on GitHub Pages.
 
   var callback = String(params.callback || '');
 
@@ -120,8 +113,6 @@ function doPost(e) {
       case 'adminSetProviderFeatured': result = adminSetProviderFeatured(payload.token, payload.id, payload.featured); break;
       case 'adminDeleteProvider': result = adminDeleteProvider(payload.token, payload.id); break;
       case 'adminClearListings': result = adminClearListings(payload.token); break;
-      case 'adminDeleteProvider': result = adminDeleteProvider(payload.token, payload.id); break;
-      case 'adminClearListings': result = adminClearListings(payload.token); break;
       default: throw new Error('العملية المطلوبة غير معروفة.');
     }
     ok = true;
@@ -133,16 +124,8 @@ function doPost(e) {
   if (ok) message.data = result;
   else message.error = error;
 
-  // Admin login returns directly to its exact requesting iframe. The password
-  // remains in the POST body; this avoids repeated JSONP polling for login.
-  if (action === 'adminLogin') {
-    return HtmlService.createHtmlOutput(buildApiResponseHtml_(message))
-      .setTitle('Daleelak API')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  // Other POST responses use the one-time JSONP bridge.
-  // Credentials and session tokens remain in the POST body, never in the URL.
+  // All POST responses, including login, use the one-time JSONP bridge.
+  // Passwords and session tokens remain in the POST body, never in the URL.
   if (/^[A-Za-z0-9_-]{8,100}$/.test(requestId)) {
     storeApiResult_(requestId, message);
     return HtmlService.createHtmlOutput('<!doctype html><html><body>تم استلام الطلب.</body></html>')
