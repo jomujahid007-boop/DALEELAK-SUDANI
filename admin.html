@@ -183,7 +183,7 @@ async function login(e){
     const result=await call('adminLogin',password);
     if(!result||!result.token)throw new Error('لم يرجع الخادم رمز جلسة صالحاً.');
     token=result.token;$('password').value='';$('loginPanel').classList.add('hidden');$('dashboard').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
-    await refresh();
+    refresh();
   }catch(err){notice('loginNotice',err.message||'تعذر تسجيل الدخول.',true);}
   finally{busy=false;btn.disabled=false;btn.textContent='دخول لوحة الإدارة';}
 }
