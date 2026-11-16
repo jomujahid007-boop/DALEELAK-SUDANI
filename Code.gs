@@ -76,9 +76,13 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
 
-  return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle(APP.title)
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  // Do not render the public app or admin UI from Apps Script.
+  // Both interfaces are hosted on GitHub Pages; this deployment serves API requests only.
+  return ContentService.createTextOutput(JSON.stringify({
+    ok: true,
+    service: 'Daleelak API',
+    message: 'واجهة التطبيق والإدارة مستضافة على GitHub Pages.'
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
