@@ -9,7 +9,7 @@
 
 const APP = {
   title: 'دليلك',
-  version: '2.3.0',
+  version: '2.4.0',
   defaultCategories: [
     'صيانة المنازل', 'السيارات والنقل', 'العقارات والسكن', 'التعليم والتدريب',
     'التقنية والتصميم', 'المطاعم والطبخ المنزلي', 'المناسبات والخدمات الشخصية',
@@ -794,8 +794,12 @@ function ensureListingLifecycle_() {
     }
     props.setProperty('LISTING_LIFECYCLE_INITIALIZED', '1');
   }
-  const hasTrigger = ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'cleanupExpiredListings_');
-  if (!hasTrigger) ScriptApp.newTrigger('cleanupExpiredListings_').timeBased().everyDays(1).atHour(3).create();
+  try {
+    const hasTrigger = ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'cleanupExpiredListings_');
+    if (!hasTrigger) ScriptApp.newTrigger('cleanupExpiredListings_').timeBased().everyDays(1).atHour(3).create();
+  } catch (err) {
+    console.error('تعذر إنشاء مشغل الحذف اليومي تلقائياً: ' + err.message);
+  }
   cleanupExpiredListings_();
 }
 function cleanupExpiredListings_() {
