@@ -1,5 +1,5 @@
 /**
- * DALEELAK SUDANI — MVP + ADMIN DASHBOARD
+ * DALEELAK — MVP + ADMIN DASHBOARD
  * Google Apps Script backend
  *
  * Keep the existing Providers / Categories / Settings sheet structure.
@@ -8,7 +8,7 @@
  */
 
 const APP = {
-  title: 'دليلك السوداني',
+  title: 'دليلك',
   version: '2.3.0',
   defaultCategories: [
     'صيانة المنازل', 'السيارات والنقل', 'العقارات والسكن', 'التعليم والتدريب',
@@ -39,7 +39,7 @@ function doGet(e) {
   // from every administrative operation.
   if (String(params.page || '').toLowerCase() === 'admin') {
     return HtmlService.createHtmlOutputFromFile('Admin')
-      .setTitle('لوحة إدارة دليلك السوداني')
+      .setTitle('لوحة إدارة دليلك')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
 
@@ -189,7 +189,7 @@ function setupDatabase() {
   if (missingCategories.length) cats.getRange(cats.getLastRow() + 1, 1, missingCategories.length, 2).setValues(missingCategories);
   const settings = ss.getSheetByName(APP.sheets.settings);
   if (settings.getLastRow() < 2) settings.getRange(2, 1, 2, 2).setValues([['AppName', APP.title], ['Version', 'MVP-2']]);
-  return 'تم تجهيز قاعدة بيانات دليلك السوداني.';
+  return 'تم تجهيز قاعدة بيانات دليلك.';
 }
 
 function storeApiResult_(requestId, message) {
@@ -826,11 +826,11 @@ function authorizeProviderImageStorage() {
     try { folder = DriveApp.getFolderById(savedId); } catch (err) {}
   }
   if (!folder) {
-    folder = DriveApp.createFolder('دليلك السوداني - صور الإعلانات');
+    folder = DriveApp.createFolder('دليلك - صور الإعلانات');
     props.setProperty(key, folder.getId());
   }
   folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  return 'تم تجهيز مجلد صور إعلانات دليلك السوداني.';
+  return 'تم تجهيز مجلد صور إعلانات دليلك.';
 }
 
 function parseProviderImages_(value) {
@@ -855,7 +855,7 @@ function saveProviderImages_(images, listingId) {
     try { folder = DriveApp.getFolderById(savedFolderId); } catch (err) {}
   }
   if (!folder) {
-    folder = DriveApp.createFolder('دليلك السوداني - صور الإعلانات');
+    folder = DriveApp.createFolder('دليلك - صور الإعلانات');
     folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     props.setProperty(key, folder.getId());
   }
