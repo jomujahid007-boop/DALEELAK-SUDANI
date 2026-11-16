@@ -125,6 +125,7 @@ function render(){
     if(!p.paymentStatus&&p.status!=='Approved')actions+='<button class="btn" onclick="changeStatus(\''+esc(p.id)+'\',\'Approved\')">اعتماد الطلب</button>';
     if(p.status!=='Rejected')actions+='<button class="btn red" onclick="changeStatus(\''+esc(p.id)+'\',\'Rejected\')">رفض</button>';
     if(p.status==='Approved')actions+='<button class="btn light" onclick="feature(\''+esc(p.id)+'\','+(!p.featured)+')">'+(p.featured?'إلغاء التمييز':'تمييز الإعلان')+'</button>';
+    actions+='<button class="btn red" onclick="deleteListing(\''+esc(p.id)+'\')">حذف الإعلان</button>';
     if(p.status!=='Pending')actions+='<button class="btn light" onclick="changeStatus(\''+esc(p.id)+'\',\'Pending\')">إعادة للمراجعة</button>';
     return '<article class="item"><span class="pill '+(p.status==='Pending'?'pending':p.status==='Approved'?'approved':'rejected')+'">'+(p.status==='Pending'?'قيد المراجعة':p.status==='Approved'?'منشور':'مرفوض')+'</span>'+(p.featured?' <span class="pill">مميز</span>':'')+'<h3>'+esc(p.name)+'</h3><div class="meta">القسم: '+esc(p.category)+'<br>المدينة: '+esc(p.city)+'<br>الهاتف: '+esc(p.phone)+'<br>واتساب: '+esc(p.whatsapp||'—')+'<br>تاريخ الطلب: '+esc(p.createdAt||'—')+'</div><div class="desc">'+esc(p.description||'لا يوجد وصف')+'</div>'+payment+'<div class="actions">'+actions+'</div></article>';
   }).join('');
@@ -145,6 +146,10 @@ function confirmPayment(id){
   actionRun(()=>call('adminConfirmPaymentAndApprove',token,id),'تم تأكيد الدفع ونشر الإعلان.');
 }
 function feature(id,value){actionRun(()=>call('adminSetProviderFeatured',token,id,value),value?'تم تمييز الإعلان.':'تم إلغاء التمييز.');}
+function deleteListing(id){
+  if(!confirm('هل أنت متأكد من حذف هذا الإعلان؟ سيتم إخفاؤه من الموقع مع الاحتفاظ بسجله في قاعدة البيانات.'))return;
+  actionRun(()=>call('adminDeleteProvider',token,id),'تم حذف الإعلان وإخفاؤه من الدليل.');
+}
 async function logout(){
   try{if(token)await call('adminLogout',token);}catch(e){}
   token='';rows=[];$('dashboard').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('logoutBtn').classList.add('hidden');
