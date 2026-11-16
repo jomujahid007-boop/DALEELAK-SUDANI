@@ -1,4 +1,4 @@
-/* دليلك السوداني — lightweight PWA shell cache.
+/* دليلك — lightweight PWA shell cache.
    Live listings and all Apps Script requests remain network-only. */
 const CACHE_NAME = "daleelak-shell-v1";
 const APP_ROOT = new URL("./", self.registration.scope);
