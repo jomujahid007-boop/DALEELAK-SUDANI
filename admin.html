@@ -28,6 +28,7 @@
     .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
     .stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:17px}
     .stat span{display:block;color:var(--muted);font-size:12px}.stat strong{display:block;font-size:27px;margin-top:8px}
+    .usage-panel{display:grid;grid-template-columns:1fr 1fr;background:#fff;border:1px solid var(--line);border-radius:14px;margin:0 0 18px;overflow:hidden}.usage-half{padding:17px;min-width:0}.usage-half+ .usage-half{border-right:1px solid var(--line)}.usage-half span{display:block;color:var(--muted);font-size:12px}.usage-half strong{display:block;font-size:27px;margin-top:8px}.usage-caption{font-size:11px;color:var(--muted);margin-top:5px}@media(max-width:420px){.usage-half{padding:13px}.usage-half strong{font-size:23px}}
     .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
     .tab{padding:10px 16px;border-radius:999px;background:#e9efeb;color:#466056;font-weight:700}
     .tab.active{background:var(--green);color:#fff}
@@ -67,6 +68,10 @@
         <div class="stat"><span>إعلانات منشورة</span><strong id="approvedCount">0</strong></div>
         <div class="stat"><span>طلبات مرفوضة</span><strong id="rejectedCount">0</strong></div>
         <div class="stat"><span>إجمالي الطلبات</span><strong id="totalCount">0</strong></div>
+      </div>
+      <div class="usage-panel" aria-label="إحصاءات استخدام التطبيق">
+        <div class="usage-half"><span>الزوار الفريدون</span><strong id="visitorCount">—</strong><div class="usage-caption">كل جهاز أو متصفح يُحسب مرة واحدة</div></div>
+        <div class="usage-half"><span>مقدمو الخدمات</span><strong id="providerCount">—</strong><div class="usage-caption">حسب أرقام التواصل غير المحذوفة</div></div>
       </div>
       <nav class="tabs">
         <button class="tab active" data-status="Pending" onclick="setTab('Pending')">قيد المراجعة</button>
@@ -151,7 +156,7 @@ function call(name,...args){
   const a=args;
   let payload={};
   if(name==='adminLogin') payload={password:a[0]};
-  else if(name==='adminGetDashboard'||name==='adminLogout') payload={token:a[0]};
+  else if(name==='adminGetDashboard'||name==='adminGetUsageStats'||name==='adminLogout') payload={token:a[0]};
   else if(name==='adminSetProviderStatus') payload={token:a[0],id:a[1],status:a[2]};
   else if(name==='adminConfirmPaymentAndApprove') payload={token:a[0],id:a[1]};
   else if(name==='adminSetProviderFeatured') payload={token:a[0],id:a[1],featured:a[2]};
@@ -175,7 +180,10 @@ async function login(e){
 }
 async function refresh(){
   $('cards').innerHTML='<div class="empty">جارٍ تحميل الطلبات...</div>';
-  try{rows=await call('adminGetDashboard',token);if(!Array.isArray(rows))throw new Error('صيغة بيانات الطلبات غير صحيحة.');counts();render();}
+  try{rows=await call('adminGetDashboard',token);if(!Array.isArray(rows))throw new Error('صيغة بيانات الطلبات غير صحيحة.');counts();render();
+    try{const stats=await call('adminGetUsageStats',token);$('visitorCount').textContent=Number(stats.visitorCount||0).toLocaleString('ar');$('providerCount').textContent=Number(stats.providerCount||0).toLocaleString('ar');}
+    catch(statsError){$('visitorCount').textContent='—';$('providerCount').textContent='—';console.warn('تعذر تحميل إحصاءات الاستخدام:',statsError);}
+  }
   catch(e){if((e.message||'').includes('انتهت جلسة الإدارة')){token='';$('dashboard').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('logoutBtn').classList.add('hidden');notice('loginNotice',e.message,true);}else notice('mainNotice',e.message,true);}
 }
 function counts(){
