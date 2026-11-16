@@ -1,9 +1,10 @@
 /* دليلك — lightweight PWA shell cache. Live listings and Apps Script remain network-only. */
-const CACHE_NAME = "daleelak-shell-v7";
+const CACHE_NAME = "daleelak-shell-v8";
 const APP_ROOT = new URL("./", self.registration.scope);
 const APP_SHELL = [
   APP_ROOT.href,
   new URL("index.html", APP_ROOT).href,
+  new URL("admin.html", APP_ROOT).href,
   new URL("manifest.webmanifest", APP_ROOT).href,
   new URL("icon.svg", APP_ROOT).href,
   new URL("daleelak-banner-q84.jpg", APP_ROOT).href
@@ -23,9 +24,14 @@ self.addEventListener("fetch", event => {
     event.respondWith((async () => {
       try {
         const response = await fetch(request);
-        if (response && response.ok) { const cache = await caches.open(CACHE_NAME); await cache.put(new URL("index.html", APP_ROOT).href, response.clone()); }
+        if (response && response.ok) { const cache = await caches.open(CACHE_NAME); await cache.put(request, response.clone()); }
         return response;
-      } catch (_) { return await caches.match(new URL("index.html", APP_ROOT).href) || Response.error(); }
+      } catch (_) {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        if (url.pathname === new URL(APP_ROOT).pathname || url.pathname.endsWith("/index.html")) return await caches.match(new URL("index.html", APP_ROOT).href) || Response.error();
+        return Response.error();
+      }
     })());
     return;
   }
