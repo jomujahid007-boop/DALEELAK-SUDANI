@@ -1,12 +1,13 @@
 /* دليلك — lightweight PWA shell cache.
    Live listings and all Apps Script requests remain network-only. */
-const CACHE_NAME = "daleelak-shell-v1";
+const CACHE_NAME = "daleelak-shell-v2";
 const APP_ROOT = new URL("./", self.registration.scope);
 const APP_SHELL = [
   APP_ROOT.href,
   new URL("index.html", APP_ROOT).href,
   new URL("manifest.webmanifest", APP_ROOT).href,
-  new URL("icon.svg", APP_ROOT).href
+  new URL("icon.svg", APP_ROOT).href,
+  new URL("banner.svg", APP_ROOT).href
 ];
 
 self.addEventListener("install", event => {
