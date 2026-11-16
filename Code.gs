@@ -412,6 +412,7 @@ function adminLogin(password) {
   let salt = props.getProperty('ADMIN_PASSWORD_SALT');
   let savedHash = props.getProperty('ADMIN_PASSWORD_HASH');
   let hashVersion = props.getProperty('ADMIN_PASSWORD_HASH_VERSION') || 'LEGACY_SHA256';
+  let migratedNow = false;
 
   if (!savedHash) {
     const initialPassword = props.getProperty('ADMIN_PASSWORD');
@@ -421,8 +422,13 @@ function adminLogin(password) {
     if (initialPassword.length < 12) {
       throw new Error('لأمان أفضل، اجعل كلمة مرور الإدارة 12 حرفاً على الأقل ثم أعد المحاولة.');
     }
+    // Validate the submitted password before migrating. This avoids hashing the
+    // same password twice during the first successful login.
+    if (!constantTimeEqual_(supplied, initialPassword)) {
+      throw new Error('كلمة المرور غير صحيحة.');
+    }
     salt = Utilities.getUuid() + Utilities.getUuid();
-    savedHash = pbkdf2Hash_(initialPassword, salt, APP.adminPasswordIterations);
+    savedHash = pbkdf2Hash_(supplied, salt, APP.adminPasswordIterations);
     hashVersion = 'PBKDF2_SHA256_' + APP.adminPasswordIterations;
     props.setProperties({
       ADMIN_PASSWORD_SALT: salt,
@@ -430,20 +436,28 @@ function adminLogin(password) {
       ADMIN_PASSWORD_HASH_VERSION: hashVersion
     });
     props.deleteProperty('ADMIN_PASSWORD');
+    migratedNow = true;
   }
 
   if (!salt) throw new Error('إعداد كلمة مرور الإدارة غير مكتمل. راجع خصائص المشروع.');
 
-  // Preserve compatibility with existing hashes: verify them using the exact
-  // iteration count recorded in their version, then upgrade after success.
-  const versionMatch = /^PBKDF2_SHA256_(\\d+)$/.exec(hashVersion);
+  // Correctly parse the PBKDF2 iteration count. A double-escaped digit class
+  // caused PBKDF2 hashes to be treated as legacy hashes and rejected.
+  const versionMatch = /^PBKDF2_SHA256_(\d+)$/.exec(hashVersion);
   const storedIterations = versionMatch ? Number(versionMatch[1]) : 0;
-  const candidateHash = storedIterations
-    ? pbkdf2Hash_(supplied, salt, storedIterations)
-    : passwordHash_(supplied, salt);
-  if (!constantTimeEqual_(candidateHash, savedHash)) throw new Error('كلمة المرور غير صحيحة.');
 
-  if (storedIterations !== APP.adminPasswordIterations || !versionMatch) {
+  if (!migratedNow) {
+    const candidateHash = storedIterations
+      ? pbkdf2Hash_(supplied, salt, storedIterations)
+      : passwordHash_(supplied, salt);
+    if (!constantTimeEqual_(candidateHash, savedHash)) {
+      throw new Error('كلمة المرور غير صحيحة.');
+    }
+  }
+
+  // Rehash only when the configured work factor changes or a legacy hash
+  // successfully verifies. Normal logins perform exactly one PBKDF2 derivation.
+  if (!migratedNow && (storedIterations !== APP.adminPasswordIterations || !versionMatch)) {
     salt = Utilities.getUuid() + Utilities.getUuid();
     savedHash = pbkdf2Hash_(supplied, salt, APP.adminPasswordIterations);
     hashVersion = 'PBKDF2_SHA256_' + APP.adminPasswordIterations;
@@ -454,10 +468,8 @@ function adminLogin(password) {
     });
   }
 
-  // Expired sessions are rejected by requireAdmin_; avoid scanning every
-  // Script Property on each login.
   const token = Utilities.getUuid() + Utilities.getUuid();
-  PropertiesService.getScriptProperties().setProperty(
+  props.setProperty(
     'DALEELAK_ADMIN_SESSION_' + token,
     String(Date.now() + APP.adminSessionSeconds * 1000)
   );
