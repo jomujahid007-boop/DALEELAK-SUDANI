@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 425" role="img" aria-labelledby="title desc">
+<title id="title">دليلك</title><desc id="desc">دليل الخدمات في الدول العربية، مع أعلام الدول العربية وعلم المملكة العربية السعودية</desc>
+<defs>
+ <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d8edf4"/><stop offset=".55" stop-color="#f5dfbd"/><stop offset="1" stop-color="#9fc6b3"/></linearGradient>
+ <linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#08754d"/><stop offset="1" stop-color="#03442f"/></linearGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#c99b36"/><stop offset=".5" stop-color="#f2d47b"/><stop offset="1" stop-color="#c99b36"/></linearGradient>
+</defs>
+<rect width="1240" height="425" rx="26" fill="url(#sky)"/>
+<circle cx="625" cy="125" r="105" fill="#fff" opacity=".22"/>
+<g fill="#527f70" opacity=".65">
+ <path d="M0 335h1240v90H0z"/>
+ <path d="M0 298h42v80H0zm52-38h34v118H52zm44 18h55v100H96zm64-55h42v155h-42zm52 40h36v115h-36zm47-29h48v144h-48zm57 58h33v86h-33zm44-45h54v131h-54zm64 25h36v106h-36zm44-56h48v162h-48zm57 49h42v113h-42zm56-31h62v144h-62zm72 45h38v99h-38zm48-62h45v161h-45zm56 32h38v129h-38zm49-48h55v177h-55zm64 53h37v124h-37zm48-34h52v158h-52zm60 45h40v113h-40zm48-58h55v171h-55zm63 47h43v124h-43zm52-27h50v151h-50z"/>
+</g>
+<g fill="#fff" opacity=".22"><path d="M0 0h1240v425H0z"/></g>
+<g font-family="Arial,sans-serif" font-size="39" text-anchor="middle">
+ <text x="54" y="83">🇸🇩</text><text x="111" y="83">🇪🇬</text><text x="168" y="83">🇦🇪</text><text x="225" y="83">🇶🇦</text><text x="282" y="83">🇰🇼</text><text x="339" y="83">🇧🇭</text><text x="396" y="83">🇴🇲</text>
+ <text x="54" y="158">🇾🇪</text><text x="111" y="158">🇯🇴</text><text x="168" y="158">🇵🇸</text><text x="225" y="158">🇱🇧</text><text x="282" y="158">🇸🇾</text><text x="339" y="158">🇮🇶</text><text x="396" y="158">🇲🇦</text>
+ <text x="54" y="233">🇩🇿</text><text x="111" y="233">🇹🇳</text><text x="168" y="233">🇱🇾</text><text x="225" y="233">🇲🇷</text><text x="282" y="233">🇸🇴</text><text x="339" y="233">🇩🇯</text><text x="396" y="233">🇰🇲</text>
+</g>
+<g transform="translate(1020 42)">
+ <path d="M0 0c-5 28-4 53 0 80" stroke="#fff" stroke-width="7" fill="none"/>
+ <path d="M4 5c58-10 133-6 190 13v187c-62 22-132 23-190 5z" fill="#087b43"/>
+ <g fill="#fff" font-family="Arial,sans-serif" text-anchor="middle"><text x="98" y="78" font-size="24">لا إله إلا الله</text><text x="98" y="111" font-size="24">محمد رسول الله</text><path d="M51 137h96" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M72 150h54" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>
+</g>
+<g text-anchor="middle" font-family="Tahoma,Arial,sans-serif">
+ <path d="M505 65h230l-115-42z" fill="url(#green)"/>
+ <circle cx="620" cy="76" r="37" fill="url(#green)" stroke="#fff" stroke-width="5"/>
+ <path d="M620 53c-13 0-22 10-22 22 0 15 22 34 22 34s22-19 22-34c0-12-9-22-22-22zm0 14a8 8 0 1 1 0 16 8 8 0 0 1 0-16z" fill="#fff"/>
+ <text x="620" y="211" font-size="83" font-weight="900" fill="#064b35">دليلك</text>
+ <text x="620" y="252" font-size="22" font-weight="700" fill="#365c4b">دليل الخدمات في الدول العربية</text>
+</g>
+<path d="M0 326Q260 370 620 337T1240 326v99H0z" fill="url(#green)"/>
+<path d="M0 326Q260 370 620 337T1240 326" fill="none" stroke="url(#gold)" stroke-width="8"/>
+<rect x="340" y="345" width="560" height="60" rx="30" fill="#03442f" stroke="url(#gold)" stroke-width="2"/>
+<text x="620" y="386" font-family="Tahoma,Arial,sans-serif" font-size="29" font-weight="800" fill="#fff" text-anchor="middle">كل خدماتك .. في مكان واحد</text>
+</svg>
