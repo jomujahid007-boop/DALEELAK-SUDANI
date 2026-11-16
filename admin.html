@@ -1,29 +1,252 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="robots" content="noindex,nofollow">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>لوحة إدارة دليلك</title>
   <style>
-    *{box-sizing:border-box}
-    body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:#f4f7f5;color:#172b25;font-family:Tahoma,Arial,sans-serif}
-    main{width:min(440px,100%);padding:28px;background:#fff;border:1px solid #e3eae6;border-radius:18px;text-align:center;box-shadow:0 12px 40px #183c2d12}
-    h1{font-size:22px;margin:0 0 10px;color:#123b32}
-    p{font-size:14px;line-height:1.8;color:#718078}
-    a{display:block;margin-top:18px;padding:13px 18px;border-radius:10px;background:#123b32;color:#fff;text-decoration:none;font-weight:700}
+    :root{--green:#123b32;--green2:#1d5b4b;--bg:#f4f7f5;--ink:#172b25;--muted:#718078;--line:#e3eae6;--white:#fff;--gold:#d6a84b;--red:#a83d35}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Tahoma,Arial,sans-serif}
+    button,input{font:inherit}button{cursor:pointer;border:0}
+    .top{background:linear-gradient(120deg,#0e3029,#1d5b4b);color:#fff;padding:22px max(18px,calc((100% - 1180px)/2));display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .brand{font-size:20px;font-weight:800}.sub{font-size:12px;color:#d0e1d9;margin-top:6px}
+    .wrap{max-width:1180px;margin:24px auto;padding:0 16px}
+    .login{max-width:420px;margin:8vh auto;background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px;box-shadow:0 12px 40px #183c2d12}
+    h1{font-size:22px;margin:0 0 8px}.muted{color:var(--muted);font-size:13px;line-height:1.8}
+    label{display:block;font-size:13px;font-weight:700;margin:18px 0 8px}
+    input{width:100%;padding:14px;border:1px solid #d8e2dc;border-radius:10px;outline:none}
+    input:focus{border-color:var(--green2);box-shadow:0 0 0 3px #1d5b4b18}
+    .btn{padding:12px 18px;border-radius:10px;background:var(--green);color:#fff;font-weight:700}
+    .btn:disabled{opacity:.55;cursor:wait}.btn.light{background:#edf3ef;color:var(--green)}
+    .btn.red{background:#fff0ee;color:var(--red)}.btn.gold{background:#fff5dc;color:#79550e}
+    .login .btn{width:100%;margin-top:18px}
+    .notice{display:none;padding:12px 14px;border-radius:10px;margin:14px 0;font-size:13px;line-height:1.7}
+    .notice.error{display:block;background:#fff0ee;color:#9c3028}.notice.ok{display:block;background:#e9f5ed;color:#1d633d}
+    .hidden{display:none!important}
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+    .stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:17px}
+    .stat span{display:block;color:var(--muted);font-size:12px}.stat strong{display:block;font-size:27px;margin-top:8px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+    .tab{padding:10px 16px;border-radius:999px;background:#e9efeb;color:#466056;font-weight:700}
+    .tab.active{background:var(--green);color:#fff}
+    .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .item{background:#fff;border:1px solid var(--line);border-radius:15px;padding:18px;position:relative;min-width:0}
+    .item h3{margin:10px 0 8px;font-size:18px}.meta{font-size:13px;line-height:2;color:#52635b;overflow-wrap:anywhere}
+    .desc{font-size:13px;line-height:1.8;margin:10px 0;padding:10px;background:#f7f9f7;border-radius:9px;white-space:pre-wrap}
+    .pill{display:inline-block;padding:5px 9px;border-radius:999px;background:#edf3ef;color:#31594a;font-size:11px;font-weight:700}
+    .pill.pending{background:#fff5dc;color:#79550e}.pill.approved{background:#e9f5ed;color:#1d633d}.pill.rejected{background:#fff0ee;color:#9c3028}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.actions .btn{font-size:12px;padding:9px 12px}
+    .empty{background:#fff;border:1px dashed #cbd8d0;border-radius:14px;padding:36px;text-align:center;color:var(--muted)}
+    .health{font-size:11px;color:#d0e1d9;margin-top:6px}
+    @media(max-width:760px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.cards{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.wrap{margin:16px auto}}
   </style>
-  <script>
-    const ADMIN_URL='https://script.google.com/macros/s/AKfycbz5gHwgOYyRmD2bptRx8c7p3YmxmJC3lkgLyRDrJhYxaak4TpQQD2tpn1maWWcnl6--/exec?page=admin';
-    window.location.replace(ADMIN_URL);
-  </script>
 </head>
 <body>
-  <main>
-    <h1>لوحة إدارة دليلك</h1>
-    <p>جارٍ فتح لوحة الإدارة الآمنة...</p>
-    <a href="https://script.google.com/macros/s/AKfycbz5gHwgOYyRmD2bptRx8c7p3YmxmJC3lkgLyRDrJhYxaak4TpQQD2tpn1maWWcnl6--/exec?page=admin">فتح لوحة الإدارة</a>
+  <header class="top">
+    <div><div class="brand">دليلك | لوحة الإدارة</div><div class="sub">إدارة الطلبات والتحقق من رسوم الإعلانات</div><div class="health" id="health">جارٍ فحص اتصال الخادم...</div></div>
+    <button class="btn light hidden" id="logoutBtn" onclick="logout()">تسجيل الخروج</button>
+  </header>
+  <main class="wrap">
+    <section class="login" id="loginPanel">
+      <h1>تسجيل دخول الإدارة</h1>
+      <div class="muted">أدخل كلمة مرور الإدارة المعتادة للوصول إلى الطلبات.</div>
+      <div class="notice" id="loginNotice"></div>
+      <form onsubmit="login(event)">
+        <label for="password">كلمة مرور الإدارة</label>
+        <input id="password" type="password" autocomplete="current-password" required maxlength="256" placeholder="كلمة المرور">
+        <button class="btn" id="loginBtn" type="submit">دخول لوحة الإدارة</button>
+      </form>
+    </section>
+    <section id="dashboard" class="hidden">
+      <div class="toolbar"><div><h1>طلبات مقدمي الخدمات</h1><div class="muted">راجع الطلبات وتحقق من رقم العملية قبل نشر الإعلان.</div></div><div class="actions"><button class="btn red" onclick="clearOldListings()">حذف الإعلانات القديمة</button><button class="btn light" onclick="refresh()">تحديث الطلبات</button></div></div>
+      <div class="notice" id="mainNotice"></div>
+      <div class="stats">
+        <div class="stat"><span>بانتظار المراجعة</span><strong id="pendingCount">0</strong></div>
+        <div class="stat"><span>إعلانات منشورة</span><strong id="approvedCount">0</strong></div>
+        <div class="stat"><span>طلبات مرفوضة</span><strong id="rejectedCount">0</strong></div>
+        <div class="stat"><span>إجمالي الطلبات</span><strong id="totalCount">0</strong></div>
+      </div>
+      <nav class="tabs">
+        <button class="tab active" data-status="Pending" onclick="setTab('Pending')">قيد المراجعة</button>
+        <button class="tab" data-status="Approved" onclick="setTab('Approved')">المنشورة</button>
+        <button class="tab" data-status="Rejected" onclick="setTab('Rejected')">المرفوضة</button>
+      </nav>
+      <div class="cards" id="cards"><div class="empty">جارٍ تحميل الطلبات...</div></div>
+    </section>
   </main>
+<script>
+let token='',rows=[],tab='Pending',busy=false;
+const $=id=>document.getElementById(id);
+const API_URL='https://script.google.com/macros/s/AKfycbz5gHwgOYyRmD2bptRx8c7p3YmxmJC3lkgLyRDrJhYxaak4TpQQD2tpn1maWWcnl6--/exec';
+let apiSequence=0;
+const apiRequests=new Map();
+window.addEventListener('message',function(event){
+  const m=event.data;
+  if(!m||m.type!=='daleelak-api-response'||!m.requestId)return;
+  const pending=apiRequests.get(m.requestId);
+  // Accept a response only from the iframe created for this exact request.
+  if(!pending||event.source!==pending.iframe.contentWindow)return;
+  clearTimeout(pending.timer);apiRequests.delete(m.requestId);
+  pending.form.remove();pending.iframe.remove();
+  if(m.ok)pending.resolve(m.data);
+  else pending.reject(new Error(m.error||'حدث خطأ في الخادم.'));
+});
+function apiCall(action,payload={}){
+  // Login uses a direct iframe response instead of JSONP polling, so the
+  // authentication result is returned immediately without repeated GET requests.
+  // The password remains POST-only; the longer guard allows one safe legacy-hash migration.
+  if(action==='adminLogin'){
+    return new Promise((resolve,reject)=>{
+      const requestId='dl_login_'+Date.now().toString(36)+'_'+(++apiSequence).toString(36);
+      const iframe=document.createElement('iframe');iframe.name='daleelak_post_'+requestId;iframe.style.display='none';iframe.setAttribute('aria-hidden','true');
+      const form=document.createElement('form');form.method='POST';form.action=API_URL;form.target=iframe.name;form.style.display='none';
+      [['action',action],['requestId',requestId],['payload',JSON.stringify(payload||{})]].forEach(([name,value])=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input);});
+      const timer=setTimeout(()=>{apiRequests.delete(requestId);form.remove();iframe.remove();reject(new Error('انتهت مهلة التحقق من كلمة المرور. حاول مرة أخرى.'));},180000);
+      apiRequests.set(requestId,{iframe,form,timer,resolve,reject});
+      document.body.appendChild(iframe);document.body.appendChild(form);
+      try{form.submit();}catch(err){clearTimeout(timer);apiRequests.delete(requestId);form.remove();iframe.remove();reject(err);}
+    });
+  }
+
+  if(action==='getPublicData'){
+    return new Promise((resolve,reject)=>{
+      const callbackName='daleelakJsonp_'+Date.now().toString(36)+'_'+(++apiSequence).toString(36);
+      const script=document.createElement('script');let settled=false,timer=null;
+      const finish=(error,data)=>{
+        if(settled)return;settled=true;if(timer!==null)clearTimeout(timer);script.remove();
+        try{delete window[callbackName];}catch(_){window[callbackName]=undefined;}
+        if(error)reject(error);else resolve(data);
+      };
+      window[callbackName]=(data)=>{
+        if(!data||data.ok===false){finish(new Error(data&&data.error?data.error:'تعذر تحميل بيانات الدليل.'));return;}
+        finish(null,data);
+      };
+      timer=setTimeout(()=>finish(new Error('انتهت مهلة تحميل بيانات الدليل من الخادم.')),30000);
+      script.onerror=()=>finish(new Error('تعذر استلام بيانات الدليل من Google Apps Script.'));
+      script.async=true;script.src=API_URL+'?action=getPublicData&callback='+encodeURIComponent(callbackName)+'&_='+Date.now();
+      document.head.appendChild(script);
+    });
+  }
+  // Every POST action receives its result through one-time JSONP polling.
+  // Secrets stay in the POST body and are never included in request URLs.
+  return new Promise((resolve,reject)=>{
+    const requestId='dl_'+(function(){const a=new Uint32Array(4);if(window.crypto&&window.crypto.getRandomValues)window.crypto.getRandomValues(a);else for(let i=0;i<a.length;i++)a[i]=Math.floor(Math.random()*4294967296);return Array.from(a,x=>x.toString(36)).join('');})();
+    const iframe=document.createElement('iframe');iframe.name='daleelak_post_'+requestId;iframe.style.display='none';iframe.setAttribute('aria-hidden','true');
+    const form=document.createElement('form');form.method='POST';form.action=API_URL;form.target=iframe.name;form.style.display='none';
+    [['action',action],['requestId',requestId],['payload',JSON.stringify(payload||{})]].forEach(([name,value])=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input);});
+    let finished=false,pollTimer=null,timeoutTimer=null;const scripts=new Set();
+    const cleanup=()=>{if(pollTimer!==null)clearTimeout(pollTimer);if(timeoutTimer!==null)clearTimeout(timeoutTimer);scripts.forEach(s=>s.remove());scripts.clear();form.remove();iframe.remove();};
+    const finish=(error,data)=>{if(finished)return;finished=true;cleanup();if(error)reject(error);else resolve(data);};
+    const poll=()=>{
+      if(finished)return;
+      const callbackName='daleelakJsonp_'+Date.now().toString(36)+'_'+(++apiSequence).toString(36);
+      const script=document.createElement('script');scripts.add(script);
+      const removeScript=()=>{scripts.delete(script);script.remove();try{delete window[callbackName];}catch(_){window[callbackName]=undefined;}};
+      window[callbackName]=(message)=>{
+        removeScript();if(finished)return;
+        if(message===null){pollTimer=setTimeout(poll,450);return;}
+        if(message&&message.ok)finish(null,message.data);
+        else finish(new Error(message&&message.error?message.error:'تعذر تنفيذ الطلب على الخادم.'));
+      };
+      script.onerror=()=>{removeScript();if(!finished)pollTimer=setTimeout(poll,1500);};
+      script.async=true;script.src=API_URL+'?action=getApiResult&requestId='+encodeURIComponent(requestId)+'&callback='+encodeURIComponent(callbackName)+'&_='+Date.now();
+      document.head.appendChild(script);
+    };
+    timeoutTimer=setTimeout(()=>finish(new Error('انتهت مهلة استجابة الخادم. لم يصل رد العملية بعد.')),90000);
+    document.body.appendChild(iframe);document.body.appendChild(form);
+    try{form.submit();pollTimer=setTimeout(poll,250);}catch(err){finish(err);}
+  });
+}
+
+let loadTimer=null, loadRequestId=0, isLoaded=false;
+function call(name,...args){
+  const a=args;
+  let payload={};
+  if(name==='adminLogin') payload={password:a[0]};
+  else if(name==='adminGetDashboard'||name==='adminLogout') payload={token:a[0]};
+  else if(name==='adminSetProviderStatus') payload={token:a[0],id:a[1],status:a[2]};
+  else if(name==='adminConfirmPaymentAndApprove') payload={token:a[0],id:a[1]};
+  else if(name==='adminSetProviderFeatured') payload={token:a[0],id:a[1],featured:a[2]};
+  else if(name==='adminDeleteProvider') payload={token:a[0],id:a[1]};
+  else if(name==='adminClearListings') payload={token:a[0]};
+  return apiCall(name,payload);
+}
+function notice(id,msg,error=false){const e=$(id);e.textContent=msg;e.className='notice '+(error?'error':'ok');}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function checkHealth(){ $('health').textContent='لوحة الإدارة متصلة بواجهة الدليل.'; }
+async function login(e){
+  e.preventDefault();if(busy)return;busy=true;
+  const btn=$('loginBtn'),password=$('password').value;btn.disabled=true;btn.textContent='جارٍ التحقق...';$('loginNotice').className='notice';
+  try{
+    const result=await call('adminLogin',password);
+    if(!result||!result.token)throw new Error('لم يرجع الخادم رمز جلسة صالحاً.');
+    token=result.token;$('password').value='';$('loginPanel').classList.add('hidden');$('dashboard').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
+    refresh();
+  }catch(err){notice('loginNotice',err.message||'تعذر تسجيل الدخول.',true);}
+  finally{busy=false;btn.disabled=false;btn.textContent='دخول لوحة الإدارة';}
+}
+async function refresh(){
+  $('cards').innerHTML='<div class="empty">جارٍ تحميل الطلبات...</div>';
+  try{rows=await call('adminGetDashboard',token);if(!Array.isArray(rows))throw new Error('صيغة بيانات الطلبات غير صحيحة.');counts();render();}
+  catch(e){if((e.message||'').includes('انتهت جلسة الإدارة')){token='';$('dashboard').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('logoutBtn').classList.add('hidden');notice('loginNotice',e.message,true);}else notice('mainNotice',e.message,true);}
+}
+function counts(){
+  $('pendingCount').textContent=rows.filter(x=>x.status==='Pending').length;
+  $('approvedCount').textContent=rows.filter(x=>x.status==='Approved').length;
+  $('rejectedCount').textContent=rows.filter(x=>x.status==='Rejected').length;
+  $('totalCount').textContent=rows.length;
+}
+function setTab(s){tab=s;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.status===s));render();}
+function render(){
+  const list=rows.filter(x=>x.status===tab);
+  if(!list.length){$('cards').innerHTML='<div class="empty">لا توجد طلبات في هذا القسم حالياً.</div>';return;}
+  $('cards').innerHTML=list.map(p=>{
+    const payment=p.paymentStatus?'<div class="desc"><b>بيانات الدفع</b><br>الحالة: '+esc(p.paymentStatus)+'<br>المبلغ: '+esc(p.paymentAmount||20)+' ريال<br>الطريقة: '+esc(p.paymentMethod==='STCPay'?'STC Pay':'تحويل بنكي')+'<br>رقم العملية: <b>'+esc(p.paymentReference||'—')+'</b><br>تاريخ الإرسال: '+esc(p.paymentSubmittedAt||'—')+'</div>':'<div class="desc">طلب قديم بدون بيانات دفع إلكتروني.</div>';
+    let actions='';
+    if(p.paymentStatus==='Submitted')actions+='<button class="btn gold" onclick="confirmPayment(\''+esc(p.id)+'\')">تأكيد الدفع ونشر الإعلان</button>';
+    if(!p.paymentStatus&&p.status!=='Approved')actions+='<button class="btn" onclick="changeStatus(\''+esc(p.id)+'\',\'Approved\')">اعتماد الطلب</button>';
+    if(p.status!=='Rejected')actions+='<button class="btn red" onclick="changeStatus(\''+esc(p.id)+'\',\'Rejected\')">رفض</button>';
+    if(p.status==='Approved')actions+='<button class="btn light" onclick="feature(\''+esc(p.id)+'\','+(!p.featured)+')">'+(p.featured?'إلغاء التمييز':'تمييز الإعلان')+'</button>';
+    actions+='<button class="btn red" onclick="deleteListing(\''+esc(p.id)+'\')">حذف الإعلان</button>';
+    if(p.status!=='Pending')actions+='<button class="btn light" onclick="changeStatus(\''+esc(p.id)+'\',\'Pending\')">إعادة للمراجعة</button>';
+    return '<article class="item"><span class="pill '+(p.status==='Pending'?'pending':p.status==='Approved'?'approved':'rejected')+'">'+(p.status==='Pending'?'قيد المراجعة':p.status==='Approved'?'منشور':'مرفوض')+'</span>'+(p.featured?' <span class="pill">مميز</span>':'')+'<h3>'+esc(p.name)+'</h3><div class="meta">القسم: '+esc(p.category)+'<br>المدينة: '+esc(p.city)+'<br>الهاتف: '+esc(p.phone)+'<br>واتساب: '+esc(p.whatsapp||'—')+'<br>تاريخ الطلب: '+esc(p.createdAt||'—')+'</div><div class="desc">'+esc(p.description||'لا يوجد وصف')+'</div>'+payment+'<div class="actions">'+actions+'</div></article>';
+  }).join('');
+}
+async function actionRun(fn,success){
+  if(busy)return;busy=true;
+  try{await fn();notice('mainNotice',success,false);await refresh();}
+  catch(e){notice('mainNotice',e.message||'تعذر تنفيذ العملية.',true);}
+  finally{busy=false;}
+}
+function changeStatus(id,status){
+  const promptText=status==='Rejected'?'هل تريد رفض هذا الطلب؟':status==='Approved'?'هل تريد اعتماد هذا الطلب؟':'إعادة الطلب إلى المراجعة؟';
+  if(!confirm(promptText))return;
+  actionRun(()=>call('adminSetProviderStatus',token,id,status),'تم تحديث حالة الطلب.');
+}
+function confirmPayment(id){
+  if(!confirm('تأكدت من وصول 20 ريال ومطابقة رقم العملية؟ سيتم نشر الإعلان بعد التأكيد.'))return;
+  actionRun(()=>call('adminConfirmPaymentAndApprove',token,id),'تم تأكيد الدفع ونشر الإعلان.');
+}
+function feature(id,value){actionRun(()=>call('adminSetProviderFeatured',token,id,value),value?'تم تمييز الإعلان.':'تم إلغاء التمييز.');}
+function deleteListing(id){
+  if(!confirm('هل أنت متأكد من حذف هذا الإعلان؟ سيتم إخفاؤه من الموقع مع الاحتفاظ بسجله.'))return;
+  actionRun(()=>call('adminDeleteProvider',token,id),'تم حذف الإعلان وإخفاؤه من الدليل.');
+}
+function clearOldListings(){
+  if(!rows.length){notice('mainNotice','لا توجد إعلانات لحذفها.',false);return;}
+  if(!confirm('تنبيه: سيتم إخفاء جميع الإعلانات المسجلة حالياً، بما فيها المنشورة والمعلقة والمرفوضة. ستبقى السجلات محفوظة في جدول البيانات. هل تريد المتابعة؟'))return;
+  actionRun(async()=>{
+    const result=await call('adminClearListings',token);
+    if(!result||result.ok!==true)throw new Error('لم يتم تأكيد حذف الإعلانات.');
+  },'تم إخفاء جميع الإعلانات القديمة.');
+}
+async function logout(){
+  try{if(token)await call('adminLogout',token);}catch(e){}
+  token='';rows=[];$('dashboard').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('logoutBtn').classList.add('hidden');
+}
+checkHealth();
+</script>
 </body>
 </html>
