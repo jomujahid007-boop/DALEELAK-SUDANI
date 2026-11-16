@@ -113,6 +113,8 @@ function doPost(e) {
       case 'adminLogin': result = adminLogin(payload.password); break;
       case 'adminLogout': result = adminLogout(payload.token); break;
       case 'adminGetDashboard': result = adminGetDashboard(payload.token); break;
+      case 'adminGetUsageStats': result = adminGetUsageStats(payload.token); break;
+      case 'recordVisitor': result = recordUniqueVisitor_(payload.visitorId); break;
       case 'adminSetProviderStatus': result = adminSetProviderStatus(payload.token, payload.id, payload.status); break;
       case 'adminConfirmPaymentAndApprove': result = adminConfirmPaymentAndApprove(payload.token, payload.id); break;
       case 'adminSetProviderFeatured': result = adminSetProviderFeatured(payload.token, payload.id, payload.featured); break;
@@ -474,6 +476,54 @@ function adminLogout(token) {
     CacheService.getScriptCache().remove('admin_session_' + token);
   }
   return { ok: true };
+}
+
+
+/* -------------------- PRIVATE USAGE COUNTERS -------------------- */
+// Stores only a SHA-256 hash of a browser-generated random ID; no personal data.
+function recordUniqueVisitor_(visitorId) {
+  visitorId = String(visitorId || '').trim();
+  if (!/^[A-Za-z0-9-]{20,80}$/.test(visitorId)) throw new Error('معرّف الزيارة غير صالح.');
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, visitorId, Utilities.Charset.UTF_8);
+  const visitorHash = Utilities.base64EncodeWebSafe(digest).replace(/=+$/g, '');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) throw new Error('تعذر الوصول إلى قاعدة البيانات.');
+    let sh = ss.getSheetByName('UsageVisitors');
+    if (!sh) {
+      sh = ss.insertSheet('UsageVisitors');
+      sh.getRange(1, 1, 1, 2).setValues([['VisitorHash', 'FirstSeen']]);
+      sh.setFrozenRows(1);
+    } else {
+      const headers = sh.getLastColumn() ? sh.getRange(1, 1, 1, 2).getDisplayValues()[0] : [];
+      if (headers.join('|') !== 'VisitorHash|FirstSeen') throw new Error('ورقة إحصاءات الزوار موجودة بعناوين غير متوقعة؛ لم يتم تعديلها.');
+    }
+    const lastRow = sh.getLastRow();
+    if (lastRow >= 2) {
+      const found = sh.getRange(2, 1, lastRow - 1, 1).createTextFinder(visitorHash).matchEntireCell(true).findNext();
+      if (found) return { ok: true, counted: false };
+    }
+    sh.appendRow([visitorHash, new Date()]);
+    return { ok: true, counted: true };
+  } finally { lock.releaseLock(); }
+}
+
+function adminGetUsageStats(token) {
+  requireAdmin_(token);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) throw new Error('تعذر الوصول إلى قاعدة البيانات.');
+  const visitorsSheet = ss.getSheetByName('UsageVisitors');
+  const visitorCount = visitorsSheet && visitorsSheet.getLastRow() > 1 ? visitorsSheet.getLastRow() - 1 : 0;
+  const providersSheet = ss.getSheetByName(APP.sheets.providers);
+  if (!providersSheet) throw new Error('ورقة Providers غير موجودة.');
+  const providerRows = readObjects_(providersSheet);
+  const providerPhones = new Set(providerRows
+    .filter(row => String(row.Status || '').toLowerCase() !== 'deleted')
+    .map(row => cleanPhone_(row.Phone || row.WhatsApp || ''))
+    .filter(Boolean));
+  return { visitorCount: visitorCount, providerCount: providerPhones.size };
 }
 
 function adminGetDashboard(token) {
