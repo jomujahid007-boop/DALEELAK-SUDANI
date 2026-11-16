@@ -86,10 +86,10 @@ function doGet(e) {
 }
 
 /**
- * Cross-origin bridge for the GitHub Pages frontend.
+ * Cross-origin API bridge for the GitHub Pages frontend.
  * Requests are submitted as ordinary HTML forms to avoid browser CORS
- * restrictions. The response is delivered to the exact requesting iframe
- * with postMessage; admin passwords and tokens are never placed in URLs.
+ * restrictions. Results are stored briefly and retrieved by JSONP polling;
+ * passwords and session tokens are never placed in URLs.
  */
 function doPost(e) {
   var requestId = String((e && e.parameter && e.parameter.requestId) || '');
